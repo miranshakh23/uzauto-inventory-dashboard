@@ -6,10 +6,10 @@
 <title>UzAuto Motors — Inventory Excess Analysis</title>
 <style>
   :root{
-    --bg:#0f1319; --panel:#171d26; --panel-2:#1c2330; --border:#2a3242;
-    --text:#e7ebf1; --text-dim:#8b95a8; --text-dim2:#5f6b80;
-    --amber:#f2a93b; --teal:#49c7bb; --red:#e2604f; --blue:#5b8def;
-    --grid:#232b39;
+    --navy-1:#0f2a4a; --navy-2:#1c3f6e;
+    --bg:#eef1f6; --card:#ffffff; --border:#e3e7ee;
+    --text:#1c2733; --text-dim:#6b7686; --text-dim2:#9aa3b0;
+    --blue:#2f6fed; --teal:#1fb6a6; --orange:#f2994a; --purple:#8b7ff0; --red:#eb5757; --slate:#94a3b8;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
@@ -17,313 +17,423 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
-  .wrap{max-width:1400px; margin:0 auto; padding:0 24px;}
+  a{color:inherit; text-decoration:none;}
 
   header{
-    border-bottom:1px solid var(--border);
-    padding:20px 0;
-    position:sticky; top:0; background:rgba(15,19,25,0.94);
-    z-index:10;
+    background:linear-gradient(120deg, var(--navy-1), var(--navy-2));
+    color:#fff; padding:18px 28px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
   }
-  header .wrap{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;}
-  .brand{display:flex; align-items:center; gap:12px;}
-  .brand-mark{
-    width:36px; height:36px; border:1.5px solid var(--amber);
-    display:flex; align-items:center; justify-content:center;
-    font-family:ui-monospace,monospace; font-weight:600; color:var(--amber); font-size:14px;
+  .hleft{display:flex; align-items:center; gap:14px;}
+  .logo-mark{
+    width:44px; height:44px; border-radius:10px; background:rgba(255,255,255,.12);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
   }
-  .brand h1{font-size:18px; font-weight:600; letter-spacing:0.2px;}
-  .brand p{font-size:12.5px; color:var(--text-dim); margin-top:1px;}
-  .meta{font-size:12.5px; color:var(--text-dim); text-align:right;}
-  .meta .val{color:var(--text); font-family:ui-monospace,monospace; font-size:13px;}
-
-  nav.tabs{display:flex; gap:2px; margin-top:16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
-  nav.tabs button{
-    background:none; border:none; color:var(--text-dim); font-family:inherit;
-    font-size:13.5px; padding:9px 16px; cursor:pointer; border-bottom:2px solid transparent;
+  header h1{font-size:22px; font-weight:700;}
+  header p{font-size:13px; color:#b9c6dc; margin-top:2px;}
+  .hright{display:flex; align-items:center; gap:16px;}
+  .brand-right{text-align:right;}
+  .brand-right .b1{font-size:14px; font-weight:700;}
+  .brand-right .b2{font-size:11.5px; color:#b9c6dc;}
+  .pill{
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+    border-radius:8px; padding:7px 12px; font-size:12px; color:#dbe4f2;
   }
-  nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
-  nav.tabs button:hover{color:var(--text);}
+  .pill b{display:block; font-size:13px; color:#fff; margin-top:1px;}
 
-  main{padding:28px 0 60px;}
-  section{display:none;}
-  section.active{display:block;}
+  .shell{display:flex; align-items:flex-start;}
+  aside{
+    width:220px; flex-shrink:0; background:var(--card); min-height:calc(100vh - 76px);
+    border-right:1px solid var(--border); padding:20px 16px; position:sticky; top:76px;
+  }
+  @media(max-width:900px){ aside{display:none;} }
+  .side-block{margin-bottom:22px;}
+  .side-title{font-size:11px; letter-spacing:.5px; color:var(--text-dim2); font-weight:600; margin-bottom:10px; text-transform:uppercase;}
+  .filt{
+    width:100%; padding:8px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:7px;
+    font-size:12.5px; color:var(--text-dim); background:#f8f9fb;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px;
+    font-size:13px; color:var(--text-dim); margin-bottom:2px; cursor:pointer;
+  }
+  .nav-item.active{background:#eaf1ff; color:var(--blue); font-weight:600;}
+  .nav-item .dot{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.7;}
+  .quote{font-size:12px; color:var(--text-dim2); font-style:italic; line-height:1.5; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);}
 
-  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
-  @media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
-  .kpi{background:var(--panel); border:1px solid var(--border); padding:18px 20px;}
-  .kpi .label{font-size:11px; letter-spacing:.4px; color:var(--text-dim); font-family:ui-monospace,monospace;}
-  .kpi .value{font-family:ui-monospace,monospace; font-size:28px; font-weight:600; margin-top:8px; line-height:1;}
-  .kpi .sub{font-size:12.5px; margin-top:8px; color:var(--text-dim2);}
-  .kpi .sub.amber{color:var(--amber);}
+  main{flex:1; min-width:0; padding:22px 26px 60px;}
 
-  .grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:14px; margin-bottom:14px;}
-  @media(max-width:1000px){.grid2{grid-template-columns:1fr;}}
+  .top-grid{display:grid; grid-template-columns:repeat(4,1fr) 1.3fr; gap:14px; margin-bottom:16px;}
+  @media(max-width:1200px){.top-grid{grid-template-columns:repeat(2,1fr);}}
 
-  .panel{background:var(--panel); border:1px solid var(--border); padding:18px 20px;}
-  .panel h3{font-size:14px; font-weight:600;}
-  .panel .subtitle{font-size:12px; color:var(--text-dim); margin-top:2px; margin-bottom:16px;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px;}
+  .kpi{display:flex; flex-direction:column; gap:2px;}
+  .kpi-top{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .kpi-icon{width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff; flex-shrink:0;}
+  .kpi-label{font-size:12.5px; color:var(--text-dim); font-weight:600;}
+  .kpi-value{font-size:24px; font-weight:700; letter-spacing:-.3px;}
+  .kpi-sub{font-size:11.5px; color:var(--text-dim2); margin-top:2px;}
 
-  table{width:100%; border-collapse:collapse; font-size:13px;}
+  .cat-card{display:flex; flex-direction:column;}
+  .cat-title{font-size:13.5px; font-weight:700; margin-bottom:10px;}
+  .cat-row{display:flex; align-items:center; gap:18px;}
+  .cat-legend{display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;}
+  .cat-legend-row{display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-dim);}
+  .cat-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .cat-legend-row .name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cat-legend-row .pct{width:38px; text-align:right; color:var(--text-dim2);}
+  .cat-legend-row .val{width:56px; text-align:right; font-weight:600; color:var(--text);}
+
+  .row3{display:grid; grid-template-columns:1.2fr 1fr 1.1fr; gap:14px; margin-bottom:16px;}
+  @media(max-width:1100px){.row3{grid-template-columns:1fr;}}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;}
+  @media(max-width:900px){.row2{grid-template-columns:1fr;}}
+
+  .panel-title{font-size:14px; font-weight:700; margin-bottom:14px;}
+
+  .hbar-list{display:flex; flex-direction:column; gap:10px;}
+  .hbar-row{display:flex; align-items:center; gap:8px;}
+  .hbar-row .lbl{width:80px; font-size:11.5px; color:var(--text-dim); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .hbar-row .track{flex:1; background:#eef1f6; height:16px; border-radius:4px; position:relative; overflow:hidden;}
+  .hbar-row .fill{position:absolute; left:0; top:0; bottom:0; border-radius:4px;}
+  .hbar-row .amt{width:56px; text-align:right; font-size:11.5px; font-weight:600; color:var(--text);}
+
+  .donut-wrap{display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+  .donut-legend{display:flex; flex-direction:column; gap:7px; flex:1; min-width:150px;}
+  .dl-row{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim);}
+  .dl-row .name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .dl-row .pct{width:36px; text-align:right; color:var(--text-dim2);}
+  .dl-row .val{width:58px; text-align:right; font-weight:600; color:var(--text);}
+
+  table{width:100%; border-collapse:collapse; font-size:12.8px;}
   th{
-    text-align:left; font-size:11px; letter-spacing:.3px; color:var(--text-dim);
-    font-family:ui-monospace,monospace; font-weight:500; padding:8px 10px; border-bottom:1px solid var(--border);
+    text-align:left; font-size:11px; letter-spacing:.3px; color:var(--text-dim2);
+    font-weight:700; padding:9px 10px; border-bottom:2px solid var(--border); text-transform:uppercase;
   }
-  td{padding:9px 10px; border-bottom:1px solid var(--grid); font-size:13px;}
-  td.num{font-family:ui-monospace,monospace; text-align:right;}
-  tr:hover td{background:var(--panel-2);}
-  .tag{
-    display:inline-block; font-family:ui-monospace,monospace; font-size:10.5px;
-    padding:2px 6px; border:1px solid var(--border); color:var(--text-dim);
+  td{padding:9px 10px; border-bottom:1px solid var(--border); color:var(--text);}
+  td.num{text-align:right; font-weight:600;}
+  tr.total-row td{font-weight:700; background:#f8f9fb; border-top:2px solid var(--border);}
+  tr:hover td{background:#f8fafc;}
+
+  .vbar-wrap{display:flex; align-items:flex-end; gap:14px; height:200px; padding-top:10px;}
+  .vbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .vbar-amt{font-size:11px; font-weight:700; margin-bottom:6px; color:var(--text);}
+  .vbar-shape{width:60%; border-radius:5px 5px 0 0;}
+  .vbar-name{font-size:11px; color:var(--text-dim); margin-top:8px; text-align:center;}
+  .vbar-sub{font-size:10px; color:var(--text-dim2);}
+
+  .insight-card{background:#f2f8f6; border:1px solid #d7ece6;}
+  .insight-row{display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:var(--text); padding:6px 0;}
+  .insight-check{color:var(--teal); flex-shrink:0; margin-top:1px;}
+  .action-card{background:#eef4ff; border:1px solid #d7e3fb; margin-top:14px;}
+  .action-row{display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:var(--text); padding:6px 0;}
+  .action-num{
+    width:18px; height:18px; border-radius:50%; background:var(--blue); color:#fff; font-size:10.5px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; font-weight:700;
   }
 
-  .bar-list{display:flex; flex-direction:column; gap:10px;}
-  .bar-row{display:flex; align-items:center; gap:10px;}
-  .bar-row .lbl{width:150px; font-size:12px; color:var(--text-dim); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .bar-row .track{flex:1; background:var(--grid); height:10px; position:relative;}
-  .bar-row .fill{position:absolute; left:0; top:0; bottom:0;}
-  .bar-row .amt{width:64px; text-align:right; font-family:ui-monospace,monospace; font-size:12px;}
-
-  .legend{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
-  .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim);}
-  .legend-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
-  .legend-row .amt{margin-left:auto; font-family:ui-monospace,monospace; color:var(--text);}
-
-  footer{border-top:1px solid var(--border); padding:18px 0; text-align:center;}
-  footer p{font-size:12px; color:var(--text-dim2);}
+  footer{padding:20px 26px; text-align:center; border-top:1px solid var(--border);}
+  footer p{font-size:11.5px; color:var(--text-dim2);}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">UA</div>
-      <div>
-        <h1>UzAuto Motors — Inventory Excess Analysis</h1>
-        <p>Optimize Stock · Reduce Excess · Improve Efficiency</p>
-      </div>
-    </div>
-    <div class="meta">
-      Hisobot sanasi<br>
-      <span class="val" id="reportDate">—</span>
+  <div class="hleft">
+    <div class="logo-mark">🏭</div>
+    <div>
+      <h1>Inventory Excess Analysis</h1>
+      <p>Optimize Stock &nbsp;|&nbsp; Reduce Excess &nbsp;|&nbsp; Improve Efficiency</p>
     </div>
   </div>
-  <div class="wrap">
-    <nav class="tabs">
-      <button class="active" data-tab="overview">Umumiy holat</button>
-      <button data-tab="country">Mamlakat / Supplier</button>
-      <button data-tab="model">Model bo'yicha</button>
-      <button data-tab="parts">Top qismlar</button>
-    </nav>
+  <div class="hright">
+    <div class="pill">Hisobot sanasi<b id="reportDate">—</b></div>
+    <div class="pill">Valyuta<b>USD</b></div>
+    <div class="brand-right">
+      <div class="b1">UzAuto Motors</div>
+      <div class="b2">Supply Chain Analytics</div>
+    </div>
   </div>
 </header>
 
-<main class="wrap">
+<div class="shell">
+  <aside>
+    <div class="side-block">
+      <div class="side-title">Filters</div>
+      <select class="filt"><option>Region: All</option></select>
+      <select class="filt"><option>MFU: All</option></select>
+      <select class="filt"><option>Supplier: All</option></select>
+    </div>
+    <div class="side-block">
+      <div class="side-title">Navigation</div>
+      <div class="nav-item active"><span class="dot"></span>Overview</div>
+      <div class="nav-item"><span class="dot"></span>By Country</div>
+      <div class="nav-item"><span class="dot"></span>By Model</div>
+      <div class="nav-item"><span class="dot"></span>By Supplier</div>
+      <div class="nav-item"><span class="dot"></span>Excess Details</div>
+    </div>
+    <div class="quote">"The goal is not just to reduce excess, but to balance stock with demand."</div>
+  </aside>
 
-  <section id="overview" class="active">
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="label">JAMI ZAXIRA QIYMATI</div>
-        <div class="value" id="kpiTotal">—</div>
-        <div class="sub" id="kpiTotalSub">yuklanmoqda...</div>
+  <main>
+    <div class="top-grid">
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:var(--blue)">📦</div>
+          <div class="kpi-label">Total Inventory Value</div>
+        </div>
+        <div class="kpi-value" id="kpiTotal">—</div>
+        <div class="kpi-sub" id="kpiTotalSub">yuklanmoqda...</div>
       </div>
-      <div class="kpi">
-        <div class="label">ORTIQCHA (EXCESS) ZAXIRA</div>
-        <div class="value" id="kpiExcess" style="color:var(--amber)">—</div>
-        <div class="sub amber" id="kpiExcessPct">—</div>
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:var(--orange)">⚠️</div>
+          <div class="kpi-label">Excess Stock Value</div>
+        </div>
+        <div class="kpi-value" id="kpiExcess" style="color:var(--orange)">—</div>
+        <div class="kpi-sub" id="kpiExcessPct">—</div>
       </div>
-      <div class="kpi">
-        <div class="label">ORTIQCHA ZAXIRA MIQDORI</div>
-        <div class="value" id="kpiExcessQty">—</div>
-        <div class="sub">dona, barcha qismlar bo'yicha</div>
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:var(--teal)">🧩</div>
+          <div class="kpi-label">Excess Items Count</div>
+        </div>
+        <div class="kpi-value" id="kpiExcessQty">—</div>
+        <div class="kpi-sub" id="kpiExcessQtyPct">—</div>
       </div>
-      <div class="kpi">
-        <div class="label">EXCESS HOLATIDAGI QISMLAR</div>
-        <div class="value" id="kpiExcessItems" style="color:var(--red)">—</div>
-        <div class="sub" id="kpiExcessItemsPct">—</div>
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:var(--purple)">Σ</div>
+          <div class="kpi-label">Avg. Excess per Part</div>
+        </div>
+        <div class="kpi-value" id="kpiAvg">—</div>
+        <div class="kpi-sub">excess qismlar bo'yicha o'rtacha</div>
+      </div>
+      <div class="card cat-card">
+        <div class="cat-title">Excess by Category (Region)</div>
+        <div class="cat-row">
+          <svg id="donutCategory" width="118" height="118" viewBox="0 0 118 118"></svg>
+          <div class="cat-legend" id="catLegend"></div>
+        </div>
       </div>
     </div>
 
-    <div class="grid2">
-      <div class="panel">
-        <h3>Ortiqcha zaxira — yetkazib berish yo'nalishi</h3>
-        <p class="subtitle">DIRECT / TRIANGULATION / GMK CKD / LOCALIZED</p>
-        <div id="donutRegion"></div>
+    <div class="row3">
+      <div class="card">
+        <div class="panel-title">Excess Amount by Country</div>
+        <div class="hbar-list" id="barCountry"></div>
       </div>
-      <div class="panel">
-        <h3>Zaxira yoshi (DOH kunlari)</h3>
-        <p class="subtitle">Qancha kun ombordagi zaxira sarflanmagan</p>
-        <div id="barAge"></div>
+      <div class="card">
+        <div class="panel-title">Excess Amount by Supplier</div>
+        <div class="donut-wrap">
+          <svg id="donutSupplier" width="120" height="120" viewBox="0 0 120 120"></svg>
+          <div class="donut-legend" id="supplierLegend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="panel-title">Excess Amount by Model (Top 8)</div>
+        <div class="hbar-list" id="barModel"></div>
       </div>
     </div>
 
-    <div class="panel">
-      <h3>Eng ko'p ortiqcha zaxiraga ega zavod bo'linmalari (MFU)</h3>
-      <p class="subtitle">Top 8 MFU kod bo'yicha, mln $</p>
-      <div id="barMfu" class="bar-list"></div>
-    </div>
-  </section>
-
-  <section id="country">
-    <div class="grid2">
-      <div class="panel">
-        <h3>Ortiqcha zaxira — mamlakat bo'yicha</h3>
-        <p class="subtitle">Yetkazib beruvchi qaysi mamlakatdan (top 10)</p>
-        <div id="barCountry" class="bar-list"></div>
-      </div>
-      <div class="panel">
-        <h3>Ortiqcha zaxira — top yetkazib beruvchilar</h3>
-        <p class="subtitle">Top 10 supplier, mln $</p>
-        <div id="barSupplier" class="bar-list"></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="model">
-    <div class="panel">
-      <h3>Ortiqcha zaxira — model bo'yicha</h3>
-      <p class="subtitle">PR_MODEL bo'yicha taqsimot, mln $</p>
-      <div id="barModel" class="bar-list"></div>
-    </div>
-  </section>
-
-  <section id="parts">
-    <div class="panel">
-      <h3>Eng yuqori qiymatli ortiqcha zaxira qismlar</h3>
-      <p class="subtitle">Top 10, excess qiymati bo'yicha saralangan</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="panel-title">Top Excess Parts</div>
       <table>
         <thead>
           <tr>
-            <th>Part Number</th><th>Nomi</th><th>Yetkazib beruvchi</th>
-            <th>Mamlakat</th><th>MFU</th>
-            <th style="text-align:right">Miqdor</th>
-            <th style="text-align:right">Excess $</th>
+            <th>Part Number</th><th>Part Name</th><th>Supplier</th>
+            <th style="text-align:right">Excess Amount</th>
+            <th style="text-align:right">Excess Qty</th>
+            <th>Country</th><th>MFU</th>
           </tr>
         </thead>
         <tbody id="topPartsBody"></tbody>
+        <tfoot><tr class="total-row" id="topPartsTotal"></tr></tfoot>
       </table>
     </div>
-  </section>
 
-</main>
+    <div class="row2">
+      <div class="card">
+        <div class="panel-title">Excess by Plant / MFU</div>
+        <div class="vbar-wrap" id="vbarMfu"></div>
+      </div>
+      <div class="card">
+        <div class="panel-title">Excess by Age (Days)</div>
+        <div class="vbar-wrap" id="vbarAge"></div>
+      </div>
+    </div>
+
+    <div class="card insight-card">
+      <div class="panel-title">Key Insights</div>
+      <div id="insightsList"></div>
+    </div>
+    <div class="card action-card">
+      <div class="panel-title">Recommended Actions</div>
+      <div id="actionsList"></div>
+    </div>
+  </main>
+</div>
 
 <footer>
-  <p>UzAuto Motors Supply Chain Analytics · Ma'lumot manbai: DATA_Power_BI.xlsx (1,499 qism)</p>
+  <p>UzAuto Motors Supply Chain Analytics · Ma'lumot manbai: DATA_Power_BI.xlsx · Jonli baza (Neon Postgres)</p>
 </footer>
 
 <script>
-// ---- REAL DATA (UzAuto Motors DATA_Power_BI.xlsx dan hisoblangan) ----
+var PALETTE = ['#2f6fed', '#1fb6a6', '#f2994a', '#eb5757', '#8b7ff0', '#0f2a4a', '#94a3b8', '#f2c94c'];
+
 function fmtCompact(v){
-  if (v >= 1e6) return "$" + (v/1e6).toFixed(1) + "M";
-  if (v >= 1e3) return "$" + (v/1e3).toFixed(0) + "K";
-  return "$" + v.toFixed(0);
+  if (v === null || v === undefined) return '$0';
+  var abs = Math.abs(v);
+  if (abs >= 1e6) return "$" + (v/1e6).toFixed(1) + "M";
+  if (abs >= 1e3) return "$" + (v/1e3).toFixed(0) + "K";
+  return "$" + Math.round(v);
 }
-function fmtInt(v){ return Math.round(v).toLocaleString('en-US'); }
-function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+function fmtInt(v){ return Math.round(v || 0).toLocaleString('en-US'); }
+function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+function pct(part, total){ return total ? (part/total*100) : 0; }
 
-// Tabs
-var tabBtns = document.querySelectorAll('nav.tabs button');
-for (var i = 0; i < tabBtns.length; i++) {
-  tabBtns[i].addEventListener('click', function(e){
-    var btn = e.currentTarget;
-    for (var j = 0; j < tabBtns.length; j++) tabBtns[j].classList.remove('active');
-    var secs = document.querySelectorAll('main section');
-    for (var k = 0; k < secs.length; k++) secs[k].classList.remove('active');
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-  });
-}
-
-// ---- Horizontal bar list renderer ----
-function renderBarList(containerId, data, color) {
-  var max = Math.max.apply(null, data.map(function(d){ return d.value; }));
-  var html = data.map(function(d){
-    var pct = (d.value / max * 100).toFixed(1);
-    return '<div class="bar-row">' +
-      '<div class="lbl" title="' + esc(d.name) + '">' + esc(d.name) + '</div>' +
-      '<div class="track"><div class="fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
-      '<div class="amt">' + fmtCompact(d.value) + '</div>' +
+function renderHBarList(containerId, data, color){
+  var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
+  document.getElementById(containerId).innerHTML = data.map(function(d){
+    var w = (d.value/max*100).toFixed(1);
+    return '<div class="hbar-row">' +
+      '<div class="lbl" title="'+esc(d.name)+'">'+esc(d.name || '—')+'</div>' +
+      '<div class="track"><div class="fill" style="width:'+w+'%;background:'+color+'"></div></div>' +
+      '<div class="amt">'+fmtCompact(d.value)+'</div>' +
     '</div>';
   }).join('');
-  document.getElementById(containerId).innerHTML = html;
 }
 
-// ---- SVG donut ----
-function renderDonut(containerId, data) {
-  var total = data.reduce(function(s,d){ return s + d.value; }, 0);
-  var size = 200, cx = size/2, cy = size/2, r = 74, sw = 26;
-  var circumference = 2 * Math.PI * r;
+function donutSVG(svgEl, data, holeLabel){
+  var total = data.reduce(function(s,d){ return s+d.value; }, 0);
+  var size = svgEl.viewBox.baseVal.width || 120;
+  var cx = size/2, cy = size/2, r = size*0.36, sw = size*0.22;
+  var circumference = 2*Math.PI*r;
   var offset = 0;
-  var circles = data.map(function(d){
-    var frac = d.value / total;
-    var len = frac * circumference;
-    var dasharray = len + ' ' + (circumference - len);
-    var el = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + d.color +
-      '" stroke-width="' + sw + '" stroke-dasharray="' + dasharray + '" stroke-dashoffset="' + (-offset) +
-      '" transform="rotate(-90 ' + cx + ' ' + cy + ')"></circle>';
+  var parts = data.map(function(d,i){
+    var frac = total ? d.value/total : 0;
+    var len = frac*circumference;
+    var el = '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+(d.color||PALETTE[i%PALETTE.length])+
+      '" stroke-width="'+sw+'" stroke-dasharray="'+len+' '+(circumference-len)+'" stroke-dashoffset="'+(-offset)+
+      '" transform="rotate(-90 '+cx+' '+cy+')"></circle>';
     offset += len;
     return el;
   }).join('');
-
-  var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' + circles +
-    '<text x="' + cx + '" y="' + (cy-4) + '" text-anchor="middle" fill="#e7ebf1" font-size="20" font-weight="600" font-family="ui-monospace,monospace">' +
-    fmtCompact(total) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy+16) + '" text-anchor="middle" fill="#8b95a8" font-size="11">Jami excess</text>' +
-    '</svg>';
-
-  var legend = '<div class="legend">' + data.map(function(d){
-    return '<div class="legend-row"><span class="legend-dot" style="background:' + d.color + '"></span>' +
-      esc(d.name) + '<span class="amt">' + fmtCompact(d.value) + '</span></div>';
-  }).join('') + '</div>';
-
-  document.getElementById(containerId).innerHTML =
-    '<div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">' + svg + legend + '</div>';
+  var centerText = holeLabel ?
+    '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="'+(size*0.11)+'" font-weight="700" fill="#1c2733">'+fmtCompact(total)+'</text>' +
+    '<text x="'+cx+'" y="'+(cy+size*0.13)+'" text-anchor="middle" font-size="'+(size*0.075)+'" fill="#9aa3b0">'+holeLabel+'</text>' : '';
+  svgEl.innerHTML = parts + centerText;
+  return data.map(function(d,i){ return {name:d.name, value:d.value, color:d.color||PALETTE[i%PALETTE.length], pct: pct(d.value,total)}; });
 }
 
-var REGION_COLORS = ['#f2a93b', '#49c7bb', '#5b8def', '#e2604f', '#9b7fe0'];
+function renderLegend(containerId, legendData, rowClass){
+  document.getElementById(containerId).innerHTML = legendData.map(function(d){
+    return '<div class="'+rowClass+'">' +
+      '<span class="cat-dot" style="background:'+d.color+'"></span>' +
+      '<span class="name" title="'+esc(d.name)+'">'+esc(d.name||'—')+'</span>' +
+      '<span class="pct">'+d.pct.toFixed(1)+'%</span>' +
+      '<span class="val">'+fmtCompact(d.value)+'</span>' +
+    '</div>';
+  }).join('');
+}
 
-function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
+function renderVBars(containerId, data, color, opts){
+  opts = opts || {};
+  var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
+  document.getElementById(containerId).innerHTML = data.map(function(d,i){
+    var h = Math.max(4, (d.value/max*150));
+    var c = opts.multiColor ? PALETTE[i%PALETTE.length] : color;
+    return '<div class="vbar-col">' +
+      '<div class="vbar-amt">'+fmtCompact(d.value)+'</div>' +
+      '<div class="vbar-shape" style="height:'+h+'px;background:'+c+'"></div>' +
+      '<div class="vbar-name">'+esc(d.name)+'</div>' +
+      (d.sub ? '<div class="vbar-sub">'+esc(d.sub)+'</div>' : '') +
+    '</div>';
+  }).join('');
+}
 
-function renderAll(d) {
+function renderAll(d){
   var kpi = d.kpi;
   var totalInv = num(kpi.total_inventory_usd);
   var excessUsd = num(kpi.excess_usd);
-  var excessQty = num(kpi.excess_qty);
-  var totalItems = parseInt(kpi.total_items, 10);
-  var excessItems = parseInt(kpi.excess_items, 10);
+  var totalItems = parseInt(kpi.total_items, 10) || 0;
+  var excessItems = parseInt(kpi.excess_items, 10) || 0;
 
   document.getElementById('reportDate').textContent = new Date().toISOString().slice(0,10);
   document.getElementById('kpiTotal').textContent = fmtCompact(totalInv);
   document.getElementById('kpiTotalSub').textContent = totalItems.toLocaleString('en-US') + " ta qism nomenklaturasi";
   document.getElementById('kpiExcess').textContent = fmtCompact(excessUsd);
-  document.getElementById('kpiExcessPct').textContent = (totalInv ? (excessUsd/totalInv*100).toFixed(1) : '0') + "% jami zaxiradan";
-  document.getElementById('kpiExcessQty').textContent = fmtCompact(excessQty).replace('$','');
-  document.getElementById('kpiExcessItems').textContent = excessItems.toLocaleString('en-US');
-  document.getElementById('kpiExcessItemsPct').textContent = "jami " + totalItems.toLocaleString('en-US') + " qismdan (" + (totalItems ? (excessItems/totalItems*100).toFixed(0) : '0') + "%)";
+  document.getElementById('kpiExcessPct').textContent = (totalInv ? pct(excessUsd,totalInv).toFixed(1) : '0') + "% jami zaxiradan";
+  document.getElementById('kpiExcessQty').textContent = excessItems.toLocaleString('en-US');
+  document.getElementById('kpiExcessQtyPct').textContent = "jami " + totalItems.toLocaleString('en-US') + " qismdan (" + pct(excessItems,totalItems).toFixed(0) + "%)";
+  document.getElementById('kpiAvg').textContent = fmtCompact(excessItems ? excessUsd/excessItems : 0);
 
-  var regionData = d.region.map(function(r, i){
-    return {name: r.name || 'Boshqa', value: num(r.value), color: REGION_COLORS[i % REGION_COLORS.length]};
-  });
-  renderDonut('donutRegion', regionData);
+  var regionData = d.region.map(function(r,i){ return {name:r.name||'Boshqa', value:num(r.value), color:PALETTE[i%PALETTE.length]}; });
+  var catLegend = donutSVG(document.getElementById('donutCategory'), regionData, null);
+  renderLegend('catLegend', catLegend, 'cat-legend-row');
 
-  renderBarList('barAge', d.ageBuckets.map(function(r){ return {name:r.name, value:num(r.value)}; }), '#49c7bb');
-  renderBarList('barMfu', d.mfu.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#f2a93b');
-  renderBarList('barCountry', d.country.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#5b8def');
-  renderBarList('barSupplier', d.supplier.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#f2a93b');
-  renderBarList('barModel', d.model.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#49c7bb');
+  renderHBarList('barCountry', d.country.map(function(r){ return {name:r.name, value:num(r.value)}; }), 'var(--blue)');
 
+  var supplierData = d.supplier.slice(0,6).map(function(r,i){ return {name:r.name||'—', value:num(r.value), color:PALETTE[i%PALETTE.length]}; });
+  var otherSum = d.supplier.slice(6).reduce(function(s,r){ return s+num(r.value); }, 0);
+  if (otherSum > 0) supplierData.push({name:'Boshqa suppliers', value:otherSum, color:'#c8d0dc'});
+  var supplierLegend = donutSVG(document.getElementById('donutSupplier'), supplierData, 'Jami excess');
+  renderLegend('supplierLegend', supplierLegend, 'dl-row');
+
+  renderHBarList('barModel', d.model.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--orange)');
+
+  var totalTop = 0, totalQty = 0;
   document.getElementById('topPartsBody').innerHTML = d.topParts.map(function(p){
+    totalTop += num(p.usd); totalQty += num(p.qty);
     return '<tr>' +
-      '<td class="mono">' + esc(p.part) + '</td>' +
-      '<td>' + esc(p.name || '') + '</td>' +
-      '<td>' + esc(p.supplier || '') + '</td>' +
-      '<td>' + esc(p.country || '') + '</td>' +
-      '<td><span class="tag">' + esc(p.mfu || '') + '</span></td>' +
-      '<td class="num">' + fmtInt(num(p.qty)) + '</td>' +
-      '<td class="num" style="color:var(--amber)">' + fmtCompact(num(p.usd)) + '</td>' +
+      '<td>'+esc(p.part)+'</td>' +
+      '<td>'+esc(p.name)+'</td>' +
+      '<td>'+esc(p.supplier)+'</td>' +
+      '<td class="num">'+fmtCompact(num(p.usd))+'</td>' +
+      '<td class="num">'+fmtInt(p.qty)+'</td>' +
+      '<td>'+esc(p.country)+'</td>' +
+      '<td>'+esc(p.mfu)+'</td>' +
     '</tr>';
+  }).join('');
+  document.getElementById('topPartsTotal').innerHTML =
+    '<td colspan="3">Jami (Top '+d.topParts.length+')</td>' +
+    '<td class="num">'+fmtCompact(totalTop)+'</td>' +
+    '<td class="num">'+fmtInt(totalQty)+'</td><td></td><td></td>';
+
+  renderVBars('vbarMfu', d.mfu.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true});
+
+  var ageOrder = ['0-30','31-60','61-90','91-120','>120'];
+  var ageSorted = d.ageBuckets.slice().sort(function(a,b){ return ageOrder.indexOf(a.name)-ageOrder.indexOf(b.name); });
+  var ageTotal = ageSorted.reduce(function(s,r){ return s+num(r.value); }, 0);
+  renderVBars('vbarAge', ageSorted.map(function(r){
+    return {name:r.name+' kun', value:num(r.value), sub: pct(num(r.value),ageTotal).toFixed(0)+'%'};
+  }), 'var(--blue)');
+
+  var topModels = d.model.slice(0,3);
+  var topModelsPct = pct(topModels.reduce(function(s,r){return s+num(r.value);},0), excessUsd);
+  var topCountry = d.country[0];
+  var oldestBucket = d.ageBuckets.filter(function(b){ return b.name === '>120'; })[0];
+  var oldestPct = oldestBucket ? pct(num(oldestBucket.value), excessUsd) : 0;
+
+  var insights = [
+    "Jami " + fmtCompact(excessUsd) + " ortiqcha zaxira aniqlandi — bu jami zaxiraning " + pct(excessUsd,totalInv).toFixed(1) + "% ni tashkil qiladi.",
+    "Top 3 model (" + topModels.map(function(m){return m.name;}).join(', ') + ") ortiqcha zaxiraning " + topModelsPct.toFixed(0) + "% ini tashkil qiladi.",
+    topCountry ? ("Eng ko'p ortiqcha zaxira " + esc(topCountry.name) + " dan kelgan qismlarda (" + fmtCompact(num(topCountry.value)) + ").") : "",
+    oldestBucket ? (">120 kundan buyon sarflanmagan zaxira " + fmtCompact(num(oldestBucket.value)) + " (" + oldestPct.toFixed(0) + "%) ni tashkil qiladi.") : ""
+  ].filter(Boolean);
+  document.getElementById('insightsList').innerHTML = insights.map(function(t){
+    return '<div class="insight-row"><span class="insight-check">✓</span><span>'+t+'</span></div>';
+  }).join('');
+
+  var actions = [
+    "Ishlab chiqarish rejasini haqiqiy talab bilan moslashtiring (S&OP jarayoni).",
+    "Ortiqcha zaxirani boshqa zavod/bozorlarga qayta taqsimlashni ko'rib chiqing.",
+    ">90 kunlik sekin harakatlanuvchi qismlarni ko'rib chiqib, chegirma yoki bekor qilishni baholang.",
+    "Haftalik excess hisobotini kuzatib boring va kamaytirish uchun KPI belgilang."
+  ];
+  document.getElementById('actionsList').innerHTML = actions.map(function(t,i){
+    return '<div class="action-row"><span class="action-num">'+(i+1)+'</span><span>'+t+'</span></div>';
   }).join('');
 }
 
@@ -331,7 +441,7 @@ fetch('/api/summary')
   .then(function(res){ return res.json(); })
   .then(renderAll)
   .catch(function(err){
-    document.body.innerHTML = '<div style="padding:40px; font-family:monospace; color:#e2604f;">' +
+    document.querySelector('main').innerHTML = '<div style="padding:40px; color:#eb5757;">' +
       'Ma\'lumotni yuklashda xatolik: ' + esc(err.message) + '</div>';
   });
 </script>

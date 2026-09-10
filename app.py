@@ -80,7 +80,7 @@ def summary():
     age = cur.fetchall()
 
     cur.execute("""
-        SELECT mfu AS name, SUM(excess_stk_usd) AS value
+        SELECT mfu AS name, SUM(excess_stk_usd) AS value, SUM(excess_stk_qty) AS qty
         FROM inventory.excess_analysis
         WHERE with_req = 'EXCESS'
         GROUP BY mfu ORDER BY value DESC LIMIT 8
@@ -88,7 +88,7 @@ def summary():
     mfu = cur.fetchall()
 
     cur.execute("""
-        SELECT from_country AS name, SUM(excess_stk_usd) AS value
+        SELECT from_country AS name, SUM(excess_stk_usd) AS value, SUM(excess_stk_qty) AS qty
         FROM inventory.excess_analysis
         WHERE with_req = 'EXCESS'
         GROUP BY from_country ORDER BY value DESC LIMIT 10
