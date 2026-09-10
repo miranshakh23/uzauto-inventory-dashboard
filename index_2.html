@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UzAuto Motors — Inventory Excess Analysis</title>
+<style>
+  :root{
+    --bg:#0f1319; --panel:#171d26; --panel-2:#1c2330; --border:#2a3242;
+    --text:#e7ebf1; --text-dim:#8b95a8; --text-dim2:#5f6b80;
+    --amber:#f2a93b; --teal:#49c7bb; --red:#e2604f; --blue:#5b8def;
+    --grid:#232b39;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+  .wrap{max-width:1400px; margin:0 auto; padding:0 24px;}
+
+  header{
+    border-bottom:1px solid var(--border);
+    padding:20px 0;
+    position:sticky; top:0; background:rgba(15,19,25,0.94);
+    z-index:10;
+  }
+  header .wrap{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:36px; height:36px; border:1.5px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace,monospace; font-weight:600; color:var(--amber); font-size:14px;
+  }
+  .brand h1{font-size:18px; font-weight:600; letter-spacing:0.2px;}
+  .brand p{font-size:12.5px; color:var(--text-dim); margin-top:1px;}
+  .meta{font-size:12.5px; color:var(--text-dim); text-align:right;}
+  .meta .val{color:var(--text); font-family:ui-monospace,monospace; font-size:13px;}
+
+  nav.tabs{display:flex; gap:2px; margin-top:16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  nav.tabs button{
+    background:none; border:none; color:var(--text-dim); font-family:inherit;
+    font-size:13.5px; padding:9px 16px; cursor:pointer; border-bottom:2px solid transparent;
+  }
+  nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
+  nav.tabs button:hover{color:var(--text);}
+
+  main{padding:28px 0 60px;}
+  section{display:none;}
+  section.active{display:block;}
+
+  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+  @media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--panel); border:1px solid var(--border); padding:18px 20px;}
+  .kpi .label{font-size:11px; letter-spacing:.4px; color:var(--text-dim); font-family:ui-monospace,monospace;}
+  .kpi .value{font-family:ui-monospace,monospace; font-size:28px; font-weight:600; margin-top:8px; line-height:1;}
+  .kpi .sub{font-size:12.5px; margin-top:8px; color:var(--text-dim2);}
+  .kpi .sub.amber{color:var(--amber);}
+
+  .grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:14px; margin-bottom:14px;}
+  @media(max-width:1000px){.grid2{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel); border:1px solid var(--border); padding:18px 20px;}
+  .panel h3{font-size:14px; font-weight:600;}
+  .panel .subtitle{font-size:12px; color:var(--text-dim); margin-top:2px; margin-bottom:16px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{
+    text-align:left; font-size:11px; letter-spacing:.3px; color:var(--text-dim);
+    font-family:ui-monospace,monospace; font-weight:500; padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  td{padding:9px 10px; border-bottom:1px solid var(--grid); font-size:13px;}
+  td.num{font-family:ui-monospace,monospace; text-align:right;}
+  tr:hover td{background:var(--panel-2);}
+  .tag{
+    display:inline-block; font-family:ui-monospace,monospace; font-size:10.5px;
+    padding:2px 6px; border:1px solid var(--border); color:var(--text-dim);
+  }
+
+  .bar-list{display:flex; flex-direction:column; gap:10px;}
+  .bar-row{display:flex; align-items:center; gap:10px;}
+  .bar-row .lbl{width:150px; font-size:12px; color:var(--text-dim); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .bar-row .track{flex:1; background:var(--grid); height:10px; position:relative;}
+  .bar-row .fill{position:absolute; left:0; top:0; bottom:0;}
+  .bar-row .amt{width:64px; text-align:right; font-family:ui-monospace,monospace; font-size:12px;}
+
+  .legend{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim);}
+  .legend-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .legend-row .amt{margin-left:auto; font-family:ui-monospace,monospace; color:var(--text);}
+
+  footer{border-top:1px solid var(--border); padding:18px 0; text-align:center;}
+  footer p{font-size:12px; color:var(--text-dim2);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">UA</div>
+      <div>
+        <h1>UzAuto Motors — Inventory Excess Analysis</h1>
+        <p>Optimize Stock · Reduce Excess · Improve Efficiency</p>
+      </div>
+    </div>
+    <div class="meta">
+      Hisobot sanasi<br>
+      <span class="val" id="reportDate">—</span>
+    </div>
+  </div>
+  <div class="wrap">
+    <nav class="tabs">
+      <button class="active" data-tab="overview">Umumiy holat</button>
+      <button data-tab="country">Mamlakat / Supplier</button>
+      <button data-tab="model">Model bo'yicha</button>
+      <button data-tab="parts">Top qismlar</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="overview" class="active">
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">JAMI ZAXIRA QIYMATI</div>
+        <div class="value" id="kpiTotal">—</div>
+        <div class="sub" id="kpiTotalSub">yuklanmoqda...</div>
+      </div>
+      <div class="kpi">
+        <div class="label">ORTIQCHA (EXCESS) ZAXIRA</div>
+        <div class="value" id="kpiExcess" style="color:var(--amber)">—</div>
+        <div class="sub amber" id="kpiExcessPct">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">ORTIQCHA ZAXIRA MIQDORI</div>
+        <div class="value" id="kpiExcessQty">—</div>
+        <div class="sub">dona, barcha qismlar bo'yicha</div>
+      </div>
+      <div class="kpi">
+        <div class="label">EXCESS HOLATIDAGI QISMLAR</div>
+        <div class="value" id="kpiExcessItems" style="color:var(--red)">—</div>
+        <div class="sub" id="kpiExcessItemsPct">—</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Ortiqcha zaxira — yetkazib berish yo'nalishi</h3>
+        <p class="subtitle">DIRECT / TRIANGULATION / GMK CKD / LOCALIZED</p>
+        <div id="donutRegion"></div>
+      </div>
+      <div class="panel">
+        <h3>Zaxira yoshi (DOH kunlari)</h3>
+        <p class="subtitle">Qancha kun ombordagi zaxira sarflanmagan</p>
+        <div id="barAge"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Eng ko'p ortiqcha zaxiraga ega zavod bo'linmalari (MFU)</h3>
+      <p class="subtitle">Top 8 MFU kod bo'yicha, mln $</p>
+      <div id="barMfu" class="bar-list"></div>
+    </div>
+  </section>
+
+  <section id="country">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Ortiqcha zaxira — mamlakat bo'yicha</h3>
+        <p class="subtitle">Yetkazib beruvchi qaysi mamlakatdan (top 10)</p>
+        <div id="barCountry" class="bar-list"></div>
+      </div>
+      <div class="panel">
+        <h3>Ortiqcha zaxira — top yetkazib beruvchilar</h3>
+        <p class="subtitle">Top 10 supplier, mln $</p>
+        <div id="barSupplier" class="bar-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="model">
+    <div class="panel">
+      <h3>Ortiqcha zaxira — model bo'yicha</h3>
+      <p class="subtitle">PR_MODEL bo'yicha taqsimot, mln $</p>
+      <div id="barModel" class="bar-list"></div>
+    </div>
+  </section>
+
+  <section id="parts">
+    <div class="panel">
+      <h3>Eng yuqori qiymatli ortiqcha zaxira qismlar</h3>
+      <p class="subtitle">Top 10, excess qiymati bo'yicha saralangan</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Part Number</th><th>Nomi</th><th>Yetkazib beruvchi</th>
+            <th>Mamlakat</th><th>MFU</th>
+            <th style="text-align:right">Miqdor</th>
+            <th style="text-align:right">Excess $</th>
+          </tr>
+        </thead>
+        <tbody id="topPartsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>UzAuto Motors Supply Chain Analytics · Ma'lumot manbai: DATA_Power_BI.xlsx (1,499 qism)</p>
+</footer>
+
+<script>
+// ---- REAL DATA (UzAuto Motors DATA_Power_BI.xlsx dan hisoblangan) ----
+function fmtCompact(v){
+  if (v >= 1e6) return "$" + (v/1e6).toFixed(1) + "M";
+  if (v >= 1e3) return "$" + (v/1e3).toFixed(0) + "K";
+  return "$" + v.toFixed(0);
+}
+function fmtInt(v){ return Math.round(v).toLocaleString('en-US'); }
+function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+// Tabs
+var tabBtns = document.querySelectorAll('nav.tabs button');
+for (var i = 0; i < tabBtns.length; i++) {
+  tabBtns[i].addEventListener('click', function(e){
+    var btn = e.currentTarget;
+    for (var j = 0; j < tabBtns.length; j++) tabBtns[j].classList.remove('active');
+    var secs = document.querySelectorAll('main section');
+    for (var k = 0; k < secs.length; k++) secs[k].classList.remove('active');
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+}
+
+// ---- Horizontal bar list renderer ----
+function renderBarList(containerId, data, color) {
+  var max = Math.max.apply(null, data.map(function(d){ return d.value; }));
+  var html = data.map(function(d){
+    var pct = (d.value / max * 100).toFixed(1);
+    return '<div class="bar-row">' +
+      '<div class="lbl" title="' + esc(d.name) + '">' + esc(d.name) + '</div>' +
+      '<div class="track"><div class="fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
+      '<div class="amt">' + fmtCompact(d.value) + '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById(containerId).innerHTML = html;
+}
+
+// ---- SVG donut ----
+function renderDonut(containerId, data) {
+  var total = data.reduce(function(s,d){ return s + d.value; }, 0);
+  var size = 200, cx = size/2, cy = size/2, r = 74, sw = 26;
+  var circumference = 2 * Math.PI * r;
+  var offset = 0;
+  var circles = data.map(function(d){
+    var frac = d.value / total;
+    var len = frac * circumference;
+    var dasharray = len + ' ' + (circumference - len);
+    var el = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + d.color +
+      '" stroke-width="' + sw + '" stroke-dasharray="' + dasharray + '" stroke-dashoffset="' + (-offset) +
+      '" transform="rotate(-90 ' + cx + ' ' + cy + ')"></circle>';
+    offset += len;
+    return el;
+  }).join('');
+
+  var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' + circles +
+    '<text x="' + cx + '" y="' + (cy-4) + '" text-anchor="middle" fill="#e7ebf1" font-size="20" font-weight="600" font-family="ui-monospace,monospace">' +
+    fmtCompact(total) + '</text>' +
+    '<text x="' + cx + '" y="' + (cy+16) + '" text-anchor="middle" fill="#8b95a8" font-size="11">Jami excess</text>' +
+    '</svg>';
+
+  var legend = '<div class="legend">' + data.map(function(d){
+    return '<div class="legend-row"><span class="legend-dot" style="background:' + d.color + '"></span>' +
+      esc(d.name) + '<span class="amt">' + fmtCompact(d.value) + '</span></div>';
+  }).join('') + '</div>';
+
+  document.getElementById(containerId).innerHTML =
+    '<div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">' + svg + legend + '</div>';
+}
+
+var REGION_COLORS = ['#f2a93b', '#49c7bb', '#5b8def', '#e2604f', '#9b7fe0'];
+
+function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
+
+function renderAll(d) {
+  var kpi = d.kpi;
+  var totalInv = num(kpi.total_inventory_usd);
+  var excessUsd = num(kpi.excess_usd);
+  var excessQty = num(kpi.excess_qty);
+  var totalItems = parseInt(kpi.total_items, 10);
+  var excessItems = parseInt(kpi.excess_items, 10);
+
+  document.getElementById('reportDate').textContent = new Date().toISOString().slice(0,10);
+  document.getElementById('kpiTotal').textContent = fmtCompact(totalInv);
+  document.getElementById('kpiTotalSub').textContent = totalItems.toLocaleString('en-US') + " ta qism nomenklaturasi";
+  document.getElementById('kpiExcess').textContent = fmtCompact(excessUsd);
+  document.getElementById('kpiExcessPct').textContent = (totalInv ? (excessUsd/totalInv*100).toFixed(1) : '0') + "% jami zaxiradan";
+  document.getElementById('kpiExcessQty').textContent = fmtCompact(excessQty).replace('$','');
+  document.getElementById('kpiExcessItems').textContent = excessItems.toLocaleString('en-US');
+  document.getElementById('kpiExcessItemsPct').textContent = "jami " + totalItems.toLocaleString('en-US') + " qismdan (" + (totalItems ? (excessItems/totalItems*100).toFixed(0) : '0') + "%)";
+
+  var regionData = d.region.map(function(r, i){
+    return {name: r.name || 'Boshqa', value: num(r.value), color: REGION_COLORS[i % REGION_COLORS.length]};
+  });
+  renderDonut('donutRegion', regionData);
+
+  renderBarList('barAge', d.ageBuckets.map(function(r){ return {name:r.name, value:num(r.value)}; }), '#49c7bb');
+  renderBarList('barMfu', d.mfu.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#f2a93b');
+  renderBarList('barCountry', d.country.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#5b8def');
+  renderBarList('barSupplier', d.supplier.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#f2a93b');
+  renderBarList('barModel', d.model.map(function(r){ return {name:r.name || '—', value:num(r.value)}; }), '#49c7bb');
+
+  document.getElementById('topPartsBody').innerHTML = d.topParts.map(function(p){
+    return '<tr>' +
+      '<td class="mono">' + esc(p.part) + '</td>' +
+      '<td>' + esc(p.name || '') + '</td>' +
+      '<td>' + esc(p.supplier || '') + '</td>' +
+      '<td>' + esc(p.country || '') + '</td>' +
+      '<td><span class="tag">' + esc(p.mfu || '') + '</span></td>' +
+      '<td class="num">' + fmtInt(num(p.qty)) + '</td>' +
+      '<td class="num" style="color:var(--amber)">' + fmtCompact(num(p.usd)) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+fetch('/api/summary')
+  .then(function(res){ return res.json(); })
+  .then(renderAll)
+  .catch(function(err){
+    document.body.innerHTML = '<div style="padding:40px; font-family:monospace; color:#e2604f;">' +
+      'Ma\'lumotni yuklashda xatolik: ' + esc(err.message) + '</div>';
+  });
+</script>
+
+</body>
+</html>
