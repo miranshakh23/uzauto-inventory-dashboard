@@ -13,11 +13,12 @@ ko'rsatadi, chunki u har safar bazadan jonli o'qiydi.
 import os
 import psycopg2
 import psycopg2.extras
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, send_file
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
+app = Flask(__name__)
 
 DB_URL = os.environ.get("DATABASE_URL")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_conn():
@@ -26,7 +27,15 @@ def get_conn():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # index.html qayerda bo'lsa (templates/ ichida yoki root'da) shu joydan topib beradi
+    candidates = [
+        os.path.join(BASE_DIR, "templates", "index.html"),
+        os.path.join(BASE_DIR, "index.html"),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return send_file(path)
+    return "index.html topilmadi. Repo tarkibini tekshiring: " + str(os.listdir(BASE_DIR)), 404
 
 
 @app.route("/api/summary")
