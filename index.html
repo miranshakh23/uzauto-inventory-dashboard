@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UzAuto Motors — Inventory Excess Analysis</title>
+<title>UzAuto Motors — Inventory Dashboard</title>
 <style>
   :root{
     --navy-1:#0f2a4a; --navy-2:#1c3f6e;
@@ -51,8 +51,13 @@
   .side-title{font-size:11px; letter-spacing:.5px; color:var(--text-dim2); font-weight:600; margin-bottom:10px; text-transform:uppercase;}
   .filt{
     width:100%; padding:8px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:7px;
-    font-size:12.5px; color:var(--text-dim); background:#f8f9fb;
+    font-size:12.5px; color:var(--text); background:#f8f9fb;
   }
+  .filt-reset{
+    width:100%; padding:7px 10px; margin-top:2px; border:1px solid var(--border); border-radius:7px;
+    font-size:11.5px; color:var(--text-dim); background:#fff; cursor:pointer;
+  }
+  .filt-reset:hover{background:#f2f4f8;}
   .nav-item{
     display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px;
     font-size:13px; color:var(--text-dim); margin-bottom:2px; cursor:pointer;
@@ -62,9 +67,13 @@
   .quote{font-size:12px; color:var(--text-dim2); font-style:italic; line-height:1.5; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);}
 
   main{flex:1; min-width:0; padding:22px 26px 60px;}
+  .page{display:none;}
+  .page.active{display:block;}
 
   .top-grid{display:grid; grid-template-columns:repeat(4,1fr) 1.3fr; gap:14px; margin-bottom:16px;}
   @media(max-width:1200px){.top-grid{grid-template-columns:repeat(2,1fr);}}
+  .top-grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px;}
+  @media(max-width:900px){.top-grid3{grid-template-columns:1fr;}}
 
   .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px;}
   .kpi{display:flex; flex-direction:column; gap:2px;}
@@ -73,6 +82,8 @@
   .kpi-label{font-size:12.5px; color:var(--text-dim); font-weight:600;}
   .kpi-value{font-size:24px; font-weight:700; letter-spacing:-.3px;}
   .kpi-sub{font-size:11.5px; color:var(--text-dim2); margin-top:2px;}
+  .kpi-bnch{font-size:11px; color:var(--text-dim2); margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);}
+  .kpi-bnch b{color:var(--text-dim);}
 
   .cat-card{display:flex; flex-direction:column;}
   .cat-title{font-size:13.5px; font-weight:700; margin-bottom:10px;}
@@ -89,7 +100,8 @@
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;}
   @media(max-width:900px){.row2{grid-template-columns:1fr;}}
 
-  .panel-title{font-size:14px; font-weight:700; margin-bottom:14px;}
+  .panel-title{font-size:14px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
+  .panel-title small{font-size:11px; color:var(--text-dim2); font-weight:500;}
 
   .hbar-list{display:flex; flex-direction:column; gap:10px;}
   .hbar-row{display:flex; align-items:center; gap:8px;}
@@ -105,15 +117,16 @@
   .dl-row .pct{width:36px; text-align:right; color:var(--text-dim2);}
   .dl-row .val{width:58px; text-align:right; font-weight:600; color:var(--text);}
 
-  table{width:100%; border-collapse:collapse; font-size:12.8px;}
+  table{width:100%; border-collapse:collapse; font-size:12.3px;}
   th{
-    text-align:left; font-size:11px; letter-spacing:.3px; color:var(--text-dim2);
-    font-weight:700; padding:9px 10px; border-bottom:2px solid var(--border); text-transform:uppercase;
+    text-align:left; font-size:10.5px; letter-spacing:.3px; color:var(--text-dim2);
+    font-weight:700; padding:9px 8px; border-bottom:2px solid var(--border); text-transform:uppercase; white-space:nowrap;
   }
-  td{padding:9px 10px; border-bottom:1px solid var(--border); color:var(--text);}
+  td{padding:8px; border-bottom:1px solid var(--border); color:var(--text); white-space:nowrap;}
   td.num{text-align:right; font-weight:600;}
   tr.total-row td{font-weight:700; background:#f8f9fb; border-top:2px solid var(--border);}
   tr:hover td{background:#f8fafc;}
+  .table-scroll{overflow-x:auto;}
 
   .vbar-wrap{display:flex; align-items:flex-end; gap:14px; height:200px; padding-top:10px;}
   .vbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
@@ -125,15 +138,11 @@
   .insight-card{background:#f2f8f6; border:1px solid #d7ece6;}
   .insight-row{display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:var(--text); padding:6px 0;}
   .insight-check{color:var(--teal); flex-shrink:0; margin-top:1px;}
-  .action-card{background:#eef4ff; border:1px solid #d7e3fb; margin-top:14px;}
-  .action-row{display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:var(--text); padding:6px 0;}
-  .action-num{
-    width:18px; height:18px; border-radius:50%; background:var(--blue); color:#fff; font-size:10.5px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; font-weight:700;
-  }
 
   footer{padding:20px 26px; text-align:center; border-top:1px solid var(--border);}
   footer p{font-size:11.5px; color:var(--text-dim2);}
+
+  .empty-note{font-size:12px; color:var(--text-dim2); padding:20px 0; text-align:center;}
 </style>
 </head>
 <body>
@@ -142,7 +151,7 @@
   <div class="hleft">
     <div class="logo-mark">🏭</div>
     <div>
-      <h1>Inventory Excess Analysis</h1>
+      <h1 id="pageTitle">Inventory Excess Analysis</h1>
       <p>Optimize Stock &nbsp;|&nbsp; Reduce Excess &nbsp;|&nbsp; Improve Efficiency</p>
     </div>
   </div>
@@ -160,117 +169,177 @@
   <aside>
     <div class="side-block">
       <div class="side-title">Filters</div>
-      <select class="filt"><option>Region: All</option></select>
-      <select class="filt"><option>MFU: All</option></select>
-      <select class="filt"><option>Supplier: All</option></select>
+      <select class="filt" id="filtRegion"><option>Region: All</option></select>
+      <select class="filt" id="filtMfu"><option>MFU: All</option></select>
+      <select class="filt" id="filtSupplier"><option>Supplier: All</option></select>
+      <button class="filt-reset" id="filtReset">Filtrlarni tozalash</button>
     </div>
     <div class="side-block">
       <div class="side-title">Navigation</div>
-      <div class="nav-item active"><span class="dot"></span>Overview</div>
-      <div class="nav-item"><span class="dot"></span>By Country</div>
-      <div class="nav-item"><span class="dot"></span>By Model</div>
-      <div class="nav-item"><span class="dot"></span>By Supplier</div>
-      <div class="nav-item"><span class="dot"></span>Excess Details</div>
+      <div class="nav-item active" data-page="excessive"><span class="dot"></span>Excessive</div>
+      <div class="nav-item" data-page="inventory"><span class="dot"></span>Inventory</div>
     </div>
     <div class="quote">"The goal is not just to reduce excess, but to balance stock with demand."</div>
   </aside>
 
   <main>
-    <div class="top-grid">
-      <div class="card kpi">
-        <div class="kpi-top">
-          <div class="kpi-icon" style="background:var(--blue)">📦</div>
-          <div class="kpi-label">Total Inventory Value</div>
+
+    <!-- ============ EXCESSIVE PAGE ============ -->
+    <div class="page active" id="page-excessive">
+      <div class="top-grid">
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--blue)">📦</div><div class="kpi-label">Total Inventory Value</div></div>
+          <div class="kpi-value" id="kpiTotal">—</div>
+          <div class="kpi-sub" id="kpiTotalSub">yuklanmoqda...</div>
         </div>
-        <div class="kpi-value" id="kpiTotal">—</div>
-        <div class="kpi-sub" id="kpiTotalSub">yuklanmoqda...</div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--orange)">⚠️</div><div class="kpi-label">Excess Stock Value</div></div>
+          <div class="kpi-value" id="kpiExcess" style="color:var(--orange)">—</div>
+          <div class="kpi-sub" id="kpiExcessPct">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--teal)">🧩</div><div class="kpi-label">Excess Items Count</div></div>
+          <div class="kpi-value" id="kpiExcessQty">—</div>
+          <div class="kpi-sub" id="kpiExcessQtyPct">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--purple)">Σ</div><div class="kpi-label">Avg. Excess per Part</div></div>
+          <div class="kpi-value" id="kpiAvg">—</div>
+          <div class="kpi-sub">excess qismlar bo'yicha o'rtacha</div>
+        </div>
+        <div class="card cat-card">
+          <div class="cat-title">Excess by Category (Region)</div>
+          <div class="cat-row">
+            <svg id="donutCategory" width="118" height="118" viewBox="0 0 118 118"></svg>
+            <div class="cat-legend" id="catLegend"></div>
+          </div>
+        </div>
       </div>
-      <div class="card kpi">
-        <div class="kpi-top">
-          <div class="kpi-icon" style="background:var(--orange)">⚠️</div>
-          <div class="kpi-label">Excess Stock Value</div>
+
+      <div class="row3">
+        <div class="card">
+          <div class="panel-title">Excess Amount by Country</div>
+          <div class="hbar-list" id="barCountry"></div>
         </div>
-        <div class="kpi-value" id="kpiExcess" style="color:var(--orange)">—</div>
-        <div class="kpi-sub" id="kpiExcessPct">—</div>
+        <div class="card">
+          <div class="panel-title">Excess Amount by Supplier</div>
+          <div class="donut-wrap">
+            <svg id="donutSupplier" width="120" height="120" viewBox="0 0 120 120"></svg>
+            <div class="donut-legend" id="supplierLegend"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-title">Excess Amount by Model (Top 8)</div>
+          <div class="hbar-list" id="barModel"></div>
+        </div>
       </div>
-      <div class="card kpi">
-        <div class="kpi-top">
-          <div class="kpi-icon" style="background:var(--teal)">🧩</div>
-          <div class="kpi-label">Excess Items Count</div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="panel-title">Top Excess Parts</div>
+        <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Part Number</th><th>Part Name</th><th>Supplier</th>
+              <th style="text-align:right">Excess Amount</th>
+              <th style="text-align:right">Excess Qty</th>
+              <th style="text-align:right">Excess Wks</th>
+              <th>Last Order Date</th>
+              <th>Last Shipment</th>
+              <th style="text-align:right">Avg Daily Req</th>
+              <th>Country</th><th>MFU</th>
+            </tr>
+          </thead>
+          <tbody id="topPartsBody"></tbody>
+          <tfoot><tr class="total-row" id="topPartsTotal"></tr></tfoot>
+        </table>
         </div>
-        <div class="kpi-value" id="kpiExcessQty">—</div>
-        <div class="kpi-sub" id="kpiExcessQtyPct">—</div>
       </div>
-      <div class="card kpi">
-        <div class="kpi-top">
-          <div class="kpi-icon" style="background:var(--purple)">Σ</div>
-          <div class="kpi-label">Avg. Excess per Part</div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="panel-title">Excess by Plant / MFU</div>
+          <div class="vbar-wrap" id="vbarMfu"></div>
         </div>
-        <div class="kpi-value" id="kpiAvg">—</div>
-        <div class="kpi-sub">excess qismlar bo'yicha o'rtacha</div>
+        <div class="card">
+          <div class="panel-title">Excess by Age (Days)</div>
+          <div class="vbar-wrap" id="vbarAge"></div>
+        </div>
       </div>
-      <div class="card cat-card">
-        <div class="cat-title">Excess by Category (Region)</div>
-        <div class="cat-row">
-          <svg id="donutCategory" width="118" height="118" viewBox="0 0 118 118"></svg>
-          <div class="cat-legend" id="catLegend"></div>
-        </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="panel-title">Excessive Trend <small>haftalik, hafta boshidagi qiymat</small></div>
+        <div id="trendChart"></div>
+      </div>
+
+      <div class="card insight-card">
+        <div class="panel-title">Key Insights</div>
+        <div id="insightsList"></div>
       </div>
     </div>
 
-    <div class="row3">
-      <div class="card">
-        <div class="panel-title">Excess Amount by Country</div>
-        <div class="hbar-list" id="barCountry"></div>
-      </div>
-      <div class="card">
-        <div class="panel-title">Excess Amount by Supplier</div>
-        <div class="donut-wrap">
-          <svg id="donutSupplier" width="120" height="120" viewBox="0 0 120 120"></svg>
-          <div class="donut-legend" id="supplierLegend"></div>
+    <!-- ============ INVENTORY PAGE ============ -->
+    <div class="page" id="page-inventory">
+      <div class="top-grid3">
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--blue)">🏗️</div><div class="kpi-label">$ PLT STK (Plant Stock)</div></div>
+          <div class="kpi-value" id="invPlt">—</div>
+          <div class="kpi-bnch">Benchmark: <b id="invPltBnch">—</b></div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--teal)">🚚</div><div class="kpi-label">$ INTR STK (In-Transit)</div></div>
+          <div class="kpi-value" id="invIntr">—</div>
+          <div class="kpi-bnch">Benchmark: <b id="invIntrBnch">—</b></div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--purple)">Σ</div><div class="kpi-label">$ TOT STK (Total Stock)</div></div>
+          <div class="kpi-value" id="invTot">—</div>
+          <div class="kpi-bnch">Benchmark: <b id="invTotBnch">—</b></div>
         </div>
       </div>
+
+      <div class="row3">
+        <div class="card">
+          <div class="panel-title">Inventory by Country</div>
+          <div class="hbar-list" id="invBarCountry"></div>
+        </div>
+        <div class="card">
+          <div class="panel-title">Inventory by Supplier</div>
+          <div class="donut-wrap">
+            <svg id="invDonutSupplier" width="120" height="120" viewBox="0 0 120 120"></svg>
+            <div class="donut-legend" id="invSupplierLegend"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-title">Inventory by Model (Top 8)</div>
+          <div class="hbar-list" id="invBarModel"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="panel-title">Top Inventory Parts</div>
+        <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Part Number</th><th>Part Name</th><th>Supplier</th>
+              <th style="text-align:right">Stock Amount</th>
+              <th style="text-align:right">Stock Qty</th>
+              <th>Country</th><th>MFU</th>
+            </tr>
+          </thead>
+          <tbody id="invTopPartsBody"></tbody>
+          <tfoot><tr class="total-row" id="invTopPartsTotal"></tr></tfoot>
+        </table>
+        </div>
+      </div>
+
       <div class="card">
-        <div class="panel-title">Excess Amount by Model (Top 8)</div>
-        <div class="hbar-list" id="barModel"></div>
+        <div class="panel-title">Inventory by Plant / MFU</div>
+        <div class="vbar-wrap" id="invVbarMfu"></div>
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
-      <div class="panel-title">Top Excess Parts</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Part Number</th><th>Part Name</th><th>Supplier</th>
-            <th style="text-align:right">Excess Amount</th>
-            <th style="text-align:right">Excess Qty</th>
-            <th>Country</th><th>MFU</th>
-          </tr>
-        </thead>
-        <tbody id="topPartsBody"></tbody>
-        <tfoot><tr class="total-row" id="topPartsTotal"></tr></tfoot>
-      </table>
-    </div>
-
-    <div class="row2">
-      <div class="card">
-        <div class="panel-title">Excess by Plant / MFU</div>
-        <div class="vbar-wrap" id="vbarMfu"></div>
-      </div>
-      <div class="card">
-        <div class="panel-title">Excess by Age (Days)</div>
-        <div class="vbar-wrap" id="vbarAge"></div>
-      </div>
-    </div>
-
-    <div class="card insight-card">
-      <div class="panel-title">Key Insights</div>
-      <div id="insightsList"></div>
-    </div>
-    <div class="card action-card">
-      <div class="panel-title">Recommended Actions</div>
-      <div id="actionsList"></div>
-    </div>
   </main>
 </div>
 
@@ -280,6 +349,7 @@
 
 <script>
 var PALETTE = ['#2f6fed', '#1fb6a6', '#f2994a', '#eb5757', '#8b7ff0', '#0f2a4a', '#94a3b8', '#f2c94c'];
+var state = { region: 'All', mfu: 'All', supplier: 'All', page: 'excessive' };
 
 function fmtCompact(v){
   if (v === null || v === undefined) return '$0';
@@ -290,12 +360,23 @@ function fmtCompact(v){
 }
 function fmtInt(v){ return Math.round(v || 0).toLocaleString('en-US'); }
 function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c] || c; }); }
 function pct(part, total){ return total ? (part/total*100) : 0; }
+function fmtDate(s){ if (!s) return '—'; return s; }
+
+function qs(){
+  var p = [];
+  if (state.region !== 'All') p.push('region=' + encodeURIComponent(state.region));
+  if (state.mfu !== 'All') p.push('mfu=' + encodeURIComponent(state.mfu));
+  if (state.supplier !== 'All') p.push('supplier=' + encodeURIComponent(state.supplier));
+  return p.length ? ('?' + p.join('&')) : '';
+}
 
 function renderHBarList(containerId, data, color){
   var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
-  document.getElementById(containerId).innerHTML = data.map(function(d){
+  var el = document.getElementById(containerId);
+  if (!data.length){ el.innerHTML = '<div class="empty-note">Ma\'lumot yo\'q</div>'; return; }
+  el.innerHTML = data.map(function(d){
     var w = (d.value/max*100).toFixed(1);
     return '<div class="hbar-row">' +
       '<div class="lbl" title="'+esc(d.name)+'">'+esc(d.name || '—')+'</div>' +
@@ -311,6 +392,7 @@ function donutSVG(svgEl, data, holeLabel){
   var cx = size/2, cy = size/2, r = size*0.36, sw = size*0.22;
   var circumference = 2*Math.PI*r;
   var offset = 0;
+  if (!total){ svgEl.innerHTML = ''; return []; }
   var parts = data.map(function(d,i){
     var frac = total ? d.value/total : 0;
     var len = frac*circumference;
@@ -340,8 +422,10 @@ function renderLegend(containerId, legendData, rowClass){
 
 function renderVBars(containerId, data, color, opts){
   opts = opts || {};
+  var el = document.getElementById(containerId);
+  if (!data.length){ el.innerHTML = '<div class="empty-note">Ma\'lumot yo\'q</div>'; return; }
   var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
-  document.getElementById(containerId).innerHTML = data.map(function(d,i){
+  el.innerHTML = data.map(function(d,i){
     var h = Math.max(4, (d.value/max*150));
     var c = opts.multiColor ? PALETTE[i%PALETTE.length] : color;
     return '<div class="vbar-col">' +
@@ -353,7 +437,13 @@ function renderVBars(containerId, data, color, opts){
   }).join('');
 }
 
-function renderAll(d){
+/* ---------------- EXCESSIVE PAGE ---------------- */
+function loadExcessive(){
+  fetch('/api/summary' + qs()).then(function(r){ return r.json(); }).then(renderExcessive);
+  fetch('/api/trend').then(function(r){ return r.json(); }).then(renderTrend);
+}
+
+function renderExcessive(d){
   var kpi = d.kpi;
   var totalInv = num(kpi.total_inventory_usd);
   var excessUsd = num(kpi.excess_usd);
@@ -370,36 +460,35 @@ function renderAll(d){
   document.getElementById('kpiAvg').textContent = fmtCompact(excessItems ? excessUsd/excessItems : 0);
 
   var regionData = d.region.map(function(r,i){ return {name:r.name||'Boshqa', value:num(r.value), color:PALETTE[i%PALETTE.length]}; });
-  var catLegend = donutSVG(document.getElementById('donutCategory'), regionData, null);
-  renderLegend('catLegend', catLegend, 'cat-legend-row');
+  renderLegend('catLegend', donutSVG(document.getElementById('donutCategory'), regionData, null), 'cat-legend-row');
 
   renderHBarList('barCountry', d.country.map(function(r){ return {name:r.name, value:num(r.value)}; }), 'var(--blue)');
 
   var supplierData = d.supplier.slice(0,6).map(function(r,i){ return {name:r.name||'—', value:num(r.value), color:PALETTE[i%PALETTE.length]}; });
   var otherSum = d.supplier.slice(6).reduce(function(s,r){ return s+num(r.value); }, 0);
   if (otherSum > 0) supplierData.push({name:'Boshqa suppliers', value:otherSum, color:'#c8d0dc'});
-  var supplierLegend = donutSVG(document.getElementById('donutSupplier'), supplierData, 'Jami excess');
-  renderLegend('supplierLegend', supplierLegend, 'dl-row');
+  renderLegend('supplierLegend', donutSVG(document.getElementById('donutSupplier'), supplierData, 'Jami excess'), 'dl-row');
 
   renderHBarList('barModel', d.model.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--orange)');
 
   var totalTop = 0, totalQty = 0;
-  document.getElementById('topPartsBody').innerHTML = d.topParts.map(function(p){
+  document.getElementById('topPartsBody').innerHTML = d.topParts.length ? d.topParts.map(function(p){
     totalTop += num(p.usd); totalQty += num(p.qty);
     return '<tr>' +
-      '<td>'+esc(p.part)+'</td>' +
-      '<td>'+esc(p.name)+'</td>' +
-      '<td>'+esc(p.supplier)+'</td>' +
+      '<td>'+esc(p.part)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.supplier)+'</td>' +
       '<td class="num">'+fmtCompact(num(p.usd))+'</td>' +
       '<td class="num">'+fmtInt(p.qty)+'</td>' +
-      '<td>'+esc(p.country)+'</td>' +
-      '<td>'+esc(p.mfu)+'</td>' +
+      '<td class="num">'+(p.excess_wks!=null?num(p.excess_wks).toFixed(1):'—')+'</td>' +
+      '<td>'+fmtDate(p.last_order_date)+'</td>' +
+      '<td>'+fmtDate(p.last_shipment)+'</td>' +
+      '<td class="num">'+(p.avg_daily_req!=null?num(p.avg_daily_req).toFixed(1):'—')+'</td>' +
+      '<td>'+esc(p.country)+'</td><td>'+esc(p.mfu)+'</td>' +
     '</tr>';
-  }).join('');
+  }).join('') : '<tr><td colspan="10" class="empty-note">Ma\'lumot yo\'q</td></tr>';
   document.getElementById('topPartsTotal').innerHTML =
     '<td colspan="3">Jami (Top '+d.topParts.length+')</td>' +
     '<td class="num">'+fmtCompact(totalTop)+'</td>' +
-    '<td class="num">'+fmtInt(totalQty)+'</td><td></td><td></td>';
+    '<td class="num">'+fmtInt(totalQty)+'</td><td colspan="5"></td>';
 
   renderVBars('vbarMfu', d.mfu.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true});
 
@@ -418,32 +507,155 @@ function renderAll(d){
 
   var insights = [
     "Jami " + fmtCompact(excessUsd) + " ortiqcha zaxira aniqlandi — bu jami zaxiraning " + pct(excessUsd,totalInv).toFixed(1) + "% ni tashkil qiladi.",
-    "Top 3 model (" + topModels.map(function(m){return m.name;}).join(', ') + ") ortiqcha zaxiraning " + topModelsPct.toFixed(0) + "% ini tashkil qiladi.",
+    topModels.length ? ("Top 3 model (" + topModels.map(function(m){return m.name;}).join(', ') + ") ortiqcha zaxiraning " + topModelsPct.toFixed(0) + "% ini tashkil qiladi.") : "",
     topCountry ? ("Eng ko'p ortiqcha zaxira " + esc(topCountry.name) + " dan kelgan qismlarda (" + fmtCompact(num(topCountry.value)) + ").") : "",
     oldestBucket ? (">120 kundan buyon sarflanmagan zaxira " + fmtCompact(num(oldestBucket.value)) + " (" + oldestPct.toFixed(0) + "%) ni tashkil qiladi.") : ""
   ].filter(Boolean);
-  document.getElementById('insightsList').innerHTML = insights.map(function(t){
+  document.getElementById('insightsList').innerHTML = insights.length ? insights.map(function(t){
     return '<div class="insight-row"><span class="insight-check">✓</span><span>'+t+'</span></div>';
-  }).join('');
-
-  var actions = [
-    "Ishlab chiqarish rejasini haqiqiy talab bilan moslashtiring (S&OP jarayoni).",
-    "Ortiqcha zaxirani boshqa zavod/bozorlarga qayta taqsimlashni ko'rib chiqing.",
-    ">90 kunlik sekin harakatlanuvchi qismlarni ko'rib chiqib, chegirma yoki bekor qilishni baholang.",
-    "Haftalik excess hisobotini kuzatib boring va kamaytirish uchun KPI belgilang."
-  ];
-  document.getElementById('actionsList').innerHTML = actions.map(function(t,i){
-    return '<div class="action-row"><span class="action-num">'+(i+1)+'</span><span>'+t+'</span></div>';
-  }).join('');
+  }).join('') : '<div class="empty-note">Ma\'lumot yo\'q</div>';
 }
 
-fetch('/api/summary')
-  .then(function(res){ return res.json(); })
-  .then(renderAll)
-  .catch(function(err){
-    document.querySelector('main').innerHTML = '<div style="padding:40px; color:#eb5757;">' +
-      'Ma\'lumotni yuklashda xatolik: ' + esc(err.message) + '</div>';
+function renderTrend(d){
+  var weeks = d.weeks || [];
+  var el = document.getElementById('trendChart');
+  if (!weeks.length){ el.innerHTML = '<div class="empty-note">Hali haftalik trend ma\'lumoti yo\'q — ETL skript kamida ikki marta, ikkita turli haftada ishga tushirilgach trend ko\'rina boshlaydi.</div>'; return; }
+  var W = 900, H = 220, padL = 50, padR = 20, padT = 20, padB = 30;
+  var maxV = Math.max.apply(null, weeks.map(function(w){ return num(w.total_inventory_usd); }).concat([1]));
+  var n = weeks.length;
+  var stepX = n > 1 ? (W-padL-padR)/(n-1) : 0;
+  function xy(i, v){
+    var x = padL + i*stepX;
+    var y = padT + (H-padT-padB) * (1 - v/maxV);
+    return [x,y];
+  }
+  function pathFor(key, color){
+    var pts = weeks.map(function(w,i){ return xy(i, num(w[key])); });
+    var d2 = pts.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
+    var dots = pts.map(function(p){ return '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+color+'"></circle>'; }).join('');
+    return '<path d="'+d2+'" fill="none" stroke="'+color+'" stroke-width="2.5"></path>' + dots;
+  }
+  var labels = weeks.map(function(w,i){
+    var x = padL + i*stepX;
+    return '<text x="'+x.toFixed(1)+'" y="'+(H-8)+'" font-size="10" fill="#9aa3b0" text-anchor="middle">'+esc(w.week_start)+'</text>';
+  }).join('');
+  var gridLines = '';
+  for (var g=0; g<=4; g++){
+    var gy = padT + (H-padT-padB)*g/4;
+    gridLines += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eef1f6" stroke-width="1"></line>';
+  }
+  var svg = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%;">' +
+    gridLines +
+    pathFor('total_inventory_usd', '#2f6fed') +
+    pathFor('excess_usd', '#f2994a') +
+    labels +
+  '</svg>' +
+  '<div style="display:flex; gap:18px; margin-top:8px; font-size:11.5px; color:var(--text-dim);">' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#2f6fed;margin-right:5px;"></span>Jami zaxira</span>' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#f2994a;margin-right:5px;"></span>Excess zaxira</span>' +
+  '</div>';
+  el.innerHTML = svg;
+}
+
+/* ---------------- INVENTORY PAGE ---------------- */
+function loadInventory(){
+  fetch('/api/inventory' + qs()).then(function(r){ return r.json(); }).then(renderInventory);
+}
+
+function renderInventory(d){
+  var kpi = d.kpi;
+  var plt = num(kpi.plt_stk_usd), intr = num(kpi.intr_stk_usd), tot = num(kpi.tot_stk_usd);
+  var pltBnch = num(kpi.plt_stk_bnch_usd), totBnch = num(kpi.tot_stk_bnch_usd);
+  var intrBnch = totBnch - pltBnch;
+
+  document.getElementById('invPlt').textContent = fmtCompact(plt);
+  document.getElementById('invPltBnch').textContent = fmtCompact(pltBnch);
+  document.getElementById('invIntr').textContent = fmtCompact(intr);
+  document.getElementById('invIntrBnch').textContent = fmtCompact(intrBnch);
+  document.getElementById('invTot').textContent = fmtCompact(tot);
+  document.getElementById('invTotBnch').textContent = fmtCompact(totBnch);
+
+  renderHBarList('invBarCountry', d.country.map(function(r){ return {name:r.name, value:num(r.value)}; }), 'var(--blue)');
+
+  var supplierData = d.supplier.slice(0,6).map(function(r,i){ return {name:r.name||'—', value:num(r.value), color:PALETTE[i%PALETTE.length]}; });
+  var otherSum = d.supplier.slice(6).reduce(function(s,r){ return s+num(r.value); }, 0);
+  if (otherSum > 0) supplierData.push({name:'Boshqa suppliers', value:otherSum, color:'#c8d0dc'});
+  renderLegend('invSupplierLegend', donutSVG(document.getElementById('invDonutSupplier'), supplierData, 'Jami zaxira'), 'dl-row');
+
+  renderHBarList('invBarModel', d.model.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--purple)');
+
+  var totalTop = 0, totalQty = 0;
+  document.getElementById('invTopPartsBody').innerHTML = d.topParts.length ? d.topParts.map(function(p){
+    totalTop += num(p.usd); totalQty += num(p.qty);
+    return '<tr>' +
+      '<td>'+esc(p.part)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.supplier)+'</td>' +
+      '<td class="num">'+fmtCompact(num(p.usd))+'</td>' +
+      '<td class="num">'+fmtInt(p.qty)+'</td>' +
+      '<td>'+esc(p.country)+'</td><td>'+esc(p.mfu)+'</td>' +
+    '</tr>';
+  }).join('') : '<tr><td colspan="7" class="empty-note">Ma\'lumot yo\'q</td></tr>';
+  document.getElementById('invTopPartsTotal').innerHTML =
+    '<td colspan="3">Jami (Top '+d.topParts.length+')</td>' +
+    '<td class="num">'+fmtCompact(totalTop)+'</td>' +
+    '<td class="num">'+fmtInt(totalQty)+'</td><td colspan="2"></td>';
+
+  renderVBars('invVbarMfu', d.mfu.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--blue)', {multiColor:true});
+}
+
+/* ---------------- FILTERS + NAV ---------------- */
+function loadFilters(){
+  fetch('/api/filters').then(function(r){ return r.json(); }).then(function(f){
+    function fill(selectId, prefix, values){
+      var sel = document.getElementById(selectId);
+      var opts = ['<option value="All">'+prefix+': All</option>'];
+      values.forEach(function(v){ opts.push('<option value="'+esc(v)+'">'+esc(v)+'</option>'); });
+      sel.innerHTML = opts.join('');
+    }
+    fill('filtRegion', 'Region', f.region);
+    fill('filtMfu', 'MFU', f.mfu);
+    fill('filtSupplier', 'Supplier', f.supplier);
   });
+}
+
+function onFilterChange(){
+  state.region = document.getElementById('filtRegion').value;
+  state.mfu = document.getElementById('filtMfu').value;
+  state.supplier = document.getElementById('filtSupplier').value;
+  reloadCurrentPage();
+}
+
+function reloadCurrentPage(){
+  if (state.page === 'excessive') loadExcessive();
+  else loadInventory();
+}
+
+document.getElementById('filtRegion').addEventListener('change', onFilterChange);
+document.getElementById('filtMfu').addEventListener('change', onFilterChange);
+document.getElementById('filtSupplier').addEventListener('change', onFilterChange);
+document.getElementById('filtReset').addEventListener('click', function(){
+  document.getElementById('filtRegion').value = 'All';
+  document.getElementById('filtMfu').value = 'All';
+  document.getElementById('filtSupplier').value = 'All';
+  onFilterChange();
+});
+
+var navItems = document.querySelectorAll('.nav-item');
+for (var i=0; i<navItems.length; i++){
+  navItems[i].addEventListener('click', function(e){
+    var el = e.currentTarget;
+    var page = el.dataset.page;
+    for (var j=0; j<navItems.length; j++) navItems[j].classList.remove('active');
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+    document.getElementById('page-' + page).classList.add('active');
+    state.page = page;
+    document.getElementById('pageTitle').textContent = page === 'excessive' ? 'Inventory Excess Analysis' : 'Inventory Overview';
+    reloadCurrentPage();
+  });
+}
+
+loadFilters();
+loadExcessive();
 </script>
 
 </body>
