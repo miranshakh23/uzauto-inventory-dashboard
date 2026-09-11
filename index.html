@@ -162,6 +162,7 @@
       <div class="b1">UzAuto Motors</div>
       <div class="b2">Supply Chain Analytics</div>
     </div>
+    <a href="/logout" style="font-size:12px; color:#dbe4f2; border:1px solid rgba(255,255,255,.25); padding:7px 12px; border-radius:8px;">Chiqish</a>
   </div>
 </header>
 
@@ -438,9 +439,11 @@ function renderVBars(containerId, data, color, opts){
 }
 
 /* ---------------- EXCESSIVE PAGE ---------------- */
+function checkAuth(res){ if (res.status === 401){ window.location.href = '/login'; throw new Error('unauthorized'); } return res.json(); }
+
 function loadExcessive(){
-  fetch('/api/summary' + qs()).then(function(r){ return r.json(); }).then(renderExcessive);
-  fetch('/api/trend').then(function(r){ return r.json(); }).then(renderTrend);
+  fetch('/api/summary' + qs()).then(checkAuth).then(renderExcessive).catch(function(){});
+  fetch('/api/trend').then(checkAuth).then(renderTrend).catch(function(){});
 }
 
 function renderExcessive(d){
@@ -559,7 +562,7 @@ function renderTrend(d){
 
 /* ---------------- INVENTORY PAGE ---------------- */
 function loadInventory(){
-  fetch('/api/inventory' + qs()).then(function(r){ return r.json(); }).then(renderInventory);
+  fetch('/api/inventory' + qs()).then(checkAuth).then(renderInventory).catch(function(){});
 }
 
 function renderInventory(d){
@@ -604,7 +607,7 @@ function renderInventory(d){
 
 /* ---------------- FILTERS + NAV ---------------- */
 function loadFilters(){
-  fetch('/api/filters').then(function(r){ return r.json(); }).then(function(f){
+  fetch('/api/filters').then(checkAuth).then(function(f){
     function fill(selectId, prefix, values){
       var sel = document.getElementById(selectId);
       var opts = ['<option value="All">'+prefix+': All</option>'];

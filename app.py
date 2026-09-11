@@ -14,14 +14,92 @@ Endpointlar:
 Filtrlash: ?region=...&mfu=...&supplier=... (bo'sh yoki 'All' bo'lsa e'tiborsiz qoldiriladi)
 """
 import os
+import functools
 import psycopg2
 import psycopg2.extras
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, session, redirect, url_for, render_template_string
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-fallback-key")
 
 DB_URL = os.environ.get("DATABASE_URL")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+LOGIN_USER = os.environ.get("LOGIN_USER")
+LOGIN_PASS = os.environ.get("LOGIN_PASS")
+
+LOGIN_PAGE = """
+<!DOCTYPE html><html lang="uz"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kirish — UzAuto Motors</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:linear-gradient(120deg,#0f2a4a,#1c3f6e);
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  .box{background:#fff; border-radius:14px; padding:36px 32px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .logo{width:44px;height:44px;border-radius:10px;background:#eaf1ff;display:flex;align-items:center;
+    justify-content:center;font-size:20px;margin-bottom:14px;}
+  h1{font-size:18px; color:#1c2733; margin-bottom:4px;}
+  p{font-size:12.5px; color:#6b7686; margin-bottom:22px;}
+  label{font-size:12px; color:#6b7686; font-weight:600; display:block; margin-bottom:5px;}
+  input{
+    width:100%; padding:10px 12px; border:1px solid #e3e7ee; border-radius:8px;
+    font-size:14px; margin-bottom:14px; color:#1c2733;
+  }
+  input:focus{outline:none; border-color:#2f6fed;}
+  button{
+    width:100%; padding:11px; background:#2f6fed; color:#fff; border:none; border-radius:8px;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  button:hover{background:#255ed6;}
+  .err{background:#fdecea; color:#c0392b; font-size:12.5px; padding:9px 12px; border-radius:7px; margin-bottom:14px;}
+</style></head>
+<body>
+  <form class="box" method="POST" action="/login">
+    <div class="logo">🏭</div>
+    <h1>UzAuto Motors</h1>
+    <p>Inventory Dashboard — faqat ruxsat etilgan foydalanuvchilar uchun</p>
+    {% if error %}<div class="err">Login yoki parol xato</div>{% endif %}
+    <label>Login</label>
+    <input type="text" name="username" autocomplete="username" required>
+    <label>Parol</label>
+    <input type="password" name="password" autocomplete="current-password" required>
+    <button type="submit">Kirish</button>
+  </form>
+</body></html>
+"""
+
+
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("authenticated"):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "unauthorized"}), 401
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        return render_template_string(LOGIN_PAGE, error=False)
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+    if LOGIN_USER and LOGIN_PASS and username == LOGIN_USER and password == LOGIN_PASS:
+        session["authenticated"] = True
+        return redirect(url_for("index"))
+    return render_template_string(LOGIN_PAGE, error=True)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 def get_conn():
@@ -42,6 +120,7 @@ def build_filter(args):
 
 
 @app.route("/")
+@login_required
 def index():
     candidates = [
         os.path.join(BASE_DIR, "templates", "index.html"),
@@ -54,6 +133,7 @@ def index():
 
 
 @app.route("/api/filters")
+@login_required
 def filters():
     conn = get_conn()
     cur = conn.cursor()
@@ -69,6 +149,7 @@ def filters():
 
 
 @app.route("/api/summary")
+@login_required
 def summary():
     where, params = build_filter(request.args)
     conn = get_conn()
@@ -157,6 +238,7 @@ def summary():
 
 
 @app.route("/api/inventory")
+@login_required
 def inventory():
     where, params = build_filter(request.args)
     conn = get_conn()
@@ -220,6 +302,7 @@ def inventory():
 
 
 @app.route("/api/trend")
+@login_required
 def trend():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
