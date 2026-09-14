@@ -168,17 +168,25 @@
 
 <div class="shell">
   <aside>
-    <div class="side-block">
+    <div class="side-block" id="filtersExcessInv">
       <div class="side-title">Filters</div>
       <select class="filt" id="filtRegion"><option>Region: All</option></select>
       <select class="filt" id="filtMfu"><option>MFU: All</option></select>
       <select class="filt" id="filtSupplier"><option>Supplier: All</option></select>
       <button class="filt-reset" id="filtReset">Filtrlarni tozalash</button>
     </div>
+    <div class="side-block" id="filtersLogistics" style="display:none;">
+      <div class="side-title">Filters</div>
+      <select class="filt" id="filtConsignee"><option>Consignee: All</option></select>
+      <select class="filt" id="filtActualCountry"><option>Country: All</option></select>
+      <select class="filt" id="filtContainerType"><option>Container: All</option></select>
+      <button class="filt-reset" id="filtResetLog">Filtrlarni tozalash</button>
+    </div>
     <div class="side-block">
       <div class="side-title">Navigation</div>
       <div class="nav-item active" data-page="excessive"><span class="dot"></span>Excessive</div>
       <div class="nav-item" data-page="inventory"><span class="dot"></span>Inventory</div>
+      <div class="nav-item" data-page="logistics"><span class="dot"></span>Logistics</div>
     </div>
     <div class="quote">"The goal is not just to reduce excess, but to balance stock with demand."</div>
   </aside>
@@ -245,6 +253,7 @@
               <th style="text-align:right">Excess Amount</th>
               <th style="text-align:right">Excess Qty</th>
               <th style="text-align:right">Excess Wks</th>
+              <th style="text-align:right">Transit Reqm</th>
               <th>Last Order Date</th>
               <th>Last Shipment</th>
               <th style="text-align:right">Avg Daily Req</th>
@@ -341,6 +350,73 @@
       </div>
     </div>
 
+    <!-- ============ LOGISTICS PAGE ============ -->
+    <div class="page" id="page-logistics">
+      <div class="top-grid3">
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--blue)">📦</div><div class="kpi-label">All Containers</div></div>
+          <div class="kpi-value" id="logTotal">—</div>
+          <div class="kpi-sub">joriy holatdagi konteynerlar</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--teal)">🟢</div><div class="kpi-label">Idle 0-10 kun</div></div>
+          <div class="kpi-value" id="logIdle10" style="color:var(--teal)">—</div>
+          <div class="kpi-sub" id="logIdle10Pct">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-top"><div class="kpi-icon" style="background:var(--red)">🔴</div><div class="kpi-label">Idle &gt;10 kun</div></div>
+          <div class="kpi-value" id="logIdleGt10" style="color:var(--red)">—</div>
+          <div class="kpi-sub" id="logIdleGt10Pct">—</div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="panel-title">Number of Containers by Location <small>Top 12</small></div>
+          <div class="hbar-list" id="logBarLocation"></div>
+        </div>
+        <div class="card">
+          <div class="panel-title">Containers at Current Country</div>
+          <div class="vbar-wrap" id="logVbarCountry"></div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="panel-title">Number of Containers by Supplier <small>Top 12</small></div>
+          <div class="hbar-list" id="logBarSupplier"></div>
+        </div>
+        <div class="card">
+          <div class="panel-title">Idle Days by Containers</div>
+          <div class="donut-wrap">
+            <svg id="logDonutIdle" width="120" height="120" viewBox="0 0 120 120"></svg>
+            <div class="donut-legend" id="logIdleLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="panel-title">Containers Qty <small>kunlik, oxirgi 10 kun</small></div>
+        <div id="logTrendChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="panel-title">Containers <small id="logTableSub"></small></div>
+        <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Container Number</th><th>Route</th><th>Actual Location</th>
+              <th style="text-align:right">Idle Days</th><th>Actual Date</th><th>Supplier Name</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody"></tbody>
+          <tfoot><tr class="total-row" id="logTableTotal"></tr></tfoot>
+        </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -350,7 +426,8 @@
 
 <script>
 var PALETTE = ['#2f6fed', '#1fb6a6', '#f2994a', '#eb5757', '#8b7ff0', '#0f2a4a', '#94a3b8', '#f2c94c'];
-var state = { region: 'All', mfu: 'All', supplier: 'All', page: 'excessive' };
+var state = { region: 'All', mfu: 'All', supplier: 'All', page: 'excessive',
+  consignee: 'All', actual_country: 'All', container_type: 'All' };
 
 function fmtCompact(v){
   if (v === null || v === undefined) return '$0';
@@ -363,7 +440,15 @@ function fmtInt(v){ return Math.round(v || 0).toLocaleString('en-US'); }
 function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c] || c; }); }
 function pct(part, total){ return total ? (part/total*100) : 0; }
-function fmtDate(s){ if (!s) return '—'; return s; }
+function fmtDate(s){
+  if (!s) return '—';
+  var d = new Date(s + 'T00:00:00');
+  if (isNaN(d.getTime())) return s;
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dd = String(d.getDate()).padStart(2,'0');
+  var yy = String(d.getFullYear()).slice(-2);
+  return dd + '-' + months[d.getMonth()] + '-' + yy;
+}
 
 function qs(){
   var p = [];
@@ -481,17 +566,18 @@ function renderExcessive(d){
       '<td>'+esc(p.part)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.supplier)+'</td>' +
       '<td class="num">'+fmtCompact(num(p.usd))+'</td>' +
       '<td class="num">'+fmtInt(p.qty)+'</td>' +
-      '<td class="num">'+(p.excess_wks!=null?num(p.excess_wks).toFixed(1):'—')+'</td>' +
+      '<td class="num">'+(p.excess_wks!=null?Math.round(num(p.excess_wks)):'—')+'</td>' +
+      '<td class="num">'+(p.transit_reqm!=null?fmtInt(p.transit_reqm):'—')+'</td>' +
       '<td>'+fmtDate(p.last_order_date)+'</td>' +
       '<td>'+fmtDate(p.last_shipment)+'</td>' +
-      '<td class="num">'+(p.avg_daily_req!=null?num(p.avg_daily_req).toFixed(1):'—')+'</td>' +
+      '<td class="num">'+(p.avg_daily_req!=null?Math.round(num(p.avg_daily_req)):'—')+'</td>' +
       '<td>'+esc(p.country)+'</td><td>'+esc(p.mfu)+'</td>' +
     '</tr>';
-  }).join('') : '<tr><td colspan="10" class="empty-note">Ma\'lumot yo\'q</td></tr>';
+  }).join('') : '<tr><td colspan="11" class="empty-note">Ma\'lumot yo\'q</td></tr>';
   document.getElementById('topPartsTotal').innerHTML =
     '<td colspan="3">Jami (Top '+d.topParts.length+')</td>' +
     '<td class="num">'+fmtCompact(totalTop)+'</td>' +
-    '<td class="num">'+fmtInt(totalQty)+'</td><td colspan="5"></td>';
+    '<td class="num">'+fmtInt(totalQty)+'</td><td colspan="6"></td>';
 
   renderVBars('vbarMfu', d.mfu.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true});
 
@@ -523,24 +609,49 @@ function renderTrend(d){
   var weeks = d.weeks || [];
   var el = document.getElementById('trendChart');
   if (!weeks.length){ el.innerHTML = '<div class="empty-note">Hali haftalik trend ma\'lumoti yo\'q — ETL skript kamida ikki marta, ikkita turli haftada ishga tushirilgach trend ko\'rina boshlaydi.</div>'; return; }
-  var W = 900, H = 220, padL = 50, padR = 20, padT = 20, padB = 30;
-  var maxV = Math.max.apply(null, weeks.map(function(w){ return num(w.total_inventory_usd); }).concat([1]));
-  var n = weeks.length;
+
+  // 10 haftalik doim ko'rinadigan oyna: birinchi yozilgan haftadan boshlab 10 hafta.
+  // Bor bo'lgan haftalar haqiqiy qiymat bilan, kelajakdagi (hali yozilmagan) haftalar 0 bilan to'ldiriladi.
+  var byWeek = {};
+  weeks.forEach(function(w){ byWeek[w.week_start] = w; });
+  var start = new Date(weeks[0].week_start + 'T00:00:00');
+  var slots = [];
+  for (var i=0; i<10; i++){
+    var dt = new Date(start.getTime() + i*7*86400000);
+    var iso = dt.toISOString().slice(0,10);
+    var rec = byWeek[iso];
+    slots.push({
+      week_start: iso,
+      total_inventory_usd: rec ? num(rec.total_inventory_usd) : 0,
+      excess_usd: rec ? num(rec.excess_usd) : 0,
+      has_data: !!rec
+    });
+  }
+
+  var W = 900, H = 260, padL = 50, padR = 20, padT = 34, padB = 34;
+  var maxV = Math.max.apply(null, slots.map(function(w){ return w.total_inventory_usd; }).concat([1]));
+  var n = slots.length;
   var stepX = n > 1 ? (W-padL-padR)/(n-1) : 0;
   function xy(i, v){
     var x = padL + i*stepX;
     var y = padT + (H-padT-padB) * (1 - v/maxV);
     return [x,y];
   }
-  function pathFor(key, color){
-    var pts = weeks.map(function(w,i){ return xy(i, num(w[key])); });
+  function pathFor(key, color, labelAbove){
+    var pts = slots.map(function(w,i){ return xy(i, w[key]); });
     var d2 = pts.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
-    var dots = pts.map(function(p){ return '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+color+'"></circle>'; }).join('');
+    var dots = pts.map(function(p,i){
+      var v = slots[i][key];
+      var label = slots[i].has_data ? fmtCompact(v) : '';
+      var ly = labelAbove ? p[1]-10 : p[1]+16;
+      return '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+color+'"></circle>' +
+        (label ? '<text x="'+p[0].toFixed(1)+'" y="'+ly+'" font-size="9.5" fill="'+color+'" text-anchor="middle" font-weight="600">'+label+'</text>' : '');
+    }).join('');
     return '<path d="'+d2+'" fill="none" stroke="'+color+'" stroke-width="2.5"></path>' + dots;
   }
-  var labels = weeks.map(function(w,i){
+  var labels = slots.map(function(w,i){
     var x = padL + i*stepX;
-    return '<text x="'+x.toFixed(1)+'" y="'+(H-8)+'" font-size="10" fill="#9aa3b0" text-anchor="middle">'+esc(w.week_start)+'</text>';
+    return '<text x="'+x.toFixed(1)+'" y="'+(H-10)+'" font-size="10" fill="#9aa3b0" text-anchor="middle">'+esc(w.week_start)+(w.has_data?'':' (kutilyapti)')+'</text>';
   }).join('');
   var gridLines = '';
   for (var g=0; g<=4; g++){
@@ -549,8 +660,8 @@ function renderTrend(d){
   }
   var svg = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%;">' +
     gridLines +
-    pathFor('total_inventory_usd', '#2f6fed') +
-    pathFor('excess_usd', '#f2994a') +
+    pathFor('total_inventory_usd', '#2f6fed', true) +
+    pathFor('excess_usd', '#f2994a', false) +
     labels +
   '</svg>' +
   '<div style="display:flex; gap:18px; margin-top:8px; font-size:11.5px; color:var(--text-dim);">' +
@@ -606,6 +717,130 @@ function renderInventory(d){
 }
 
 /* ---------------- FILTERS + NAV ---------------- */
+/* ---------------- LOGISTICS PAGE ---------------- */
+function qsLog(){
+  var p = [];
+  if (state.consignee !== 'All') p.push('consignee=' + encodeURIComponent(state.consignee));
+  if (state.actual_country !== 'All') p.push('actual_country=' + encodeURIComponent(state.actual_country));
+  if (state.container_type !== 'All') p.push('container_type=' + encodeURIComponent(state.container_type));
+  return p.length ? ('?' + p.join('&')) : '';
+}
+
+function loadLogistics(){
+  fetch('/api/logistics/summary' + qsLog()).then(checkAuth).then(renderLogistics).catch(function(){});
+}
+
+function renderLogistics(d){
+  var kpi = d.kpi;
+  var total = parseInt(kpi.total, 10) || 0;
+  var idle10 = parseInt(kpi.idle_0_10, 10) || 0;
+  var idleGt10 = parseInt(kpi.idle_gt10, 10) || 0;
+
+  document.getElementById('logTotal').textContent = total.toLocaleString('en-US');
+  document.getElementById('logIdle10').textContent = idle10.toLocaleString('en-US');
+  document.getElementById('logIdle10Pct').textContent = pct(idle10,total).toFixed(0) + "% jami konteynerdan";
+  document.getElementById('logIdleGt10').textContent = idleGt10.toLocaleString('en-US');
+  document.getElementById('logIdleGt10Pct').textContent = pct(idleGt10,total).toFixed(0) + "% jami konteynerdan";
+
+  renderHBarList('logBarLocation', d.byLocation.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--blue)');
+  renderVBars('logVbarCountry', d.byCountry.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true});
+  renderHBarList('logBarSupplier', d.bySupplier.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--purple)');
+
+  var idleData = [
+    {name:'0-10 kun', value:idle10, color:'#1fb6a6'},
+    {name:'>10 kun', value:idleGt10, color:'#eb5757'}
+  ];
+  renderLegend('logIdleLegend', donutSVG(document.getElementById('logDonutIdle'), idleData, 'Jami'), 'dl-row');
+
+  // Daily qty trend - last 10 days, oxirgi kunlar 0 bilan to'ldiriladi
+  var byDate = {};
+  (d.dailyQty || []).forEach(function(r){ byDate[r.actual_date] = num(r.qty); });
+  var today = new Date();
+  var days = [];
+  for (var i=9; i>=0; i--){
+    var dt = new Date(today.getTime() - i*86400000);
+    var iso = dt.toISOString().slice(0,10);
+    days.push({date: iso, qty: byDate[iso] || 0});
+  }
+  renderLogTrend(days);
+
+  var totalIdle = 0;
+  document.getElementById('logTableBody').innerHTML = d.table.length ? d.table.map(function(r){
+    totalIdle += num(r.idle_days);
+    return '<tr>' +
+      '<td>'+esc(r.container_number)+'</td><td>'+esc(r.route)+'</td><td>'+esc(r.actual_location)+'</td>' +
+      '<td class="num">'+fmtInt(r.idle_days)+'</td>' +
+      '<td>'+fmtDate(r.actual_date)+'</td><td>'+esc(r.supplier_name)+'</td>' +
+    '</tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-note">Ma\'lumot yo\'q</td></tr>';
+  document.getElementById('logTableTotal').innerHTML =
+    '<td colspan="3">Jami (ko\'rsatilgan '+d.table.length+' ta)</td>' +
+    '<td class="num">'+fmtInt(totalIdle)+'</td><td colspan="2"></td>';
+  document.getElementById('logTableSub').textContent = 'top ' + d.table.length + ' ta, idle kunlar bo\'yicha saralangan';
+}
+
+function renderLogTrend(days){
+  var el = document.getElementById('logTrendChart');
+  var W = 900, H = 200, padL = 40, padR = 20, padT = 30, padB = 30;
+  var maxV = Math.max.apply(null, days.map(function(d){ return d.qty; }).concat([1]));
+  var n = days.length;
+  var stepX = n > 1 ? (W-padL-padR)/(n-1) : 0;
+  var pts = days.map(function(d,i){
+    var x = padL + i*stepX;
+    var y = padT + (H-padT-padB) * (1 - d.qty/maxV);
+    return [x,y];
+  });
+  var path = pts.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
+  var dots = pts.map(function(p,i){
+    return '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="#2f6fed"></circle>' +
+      '<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-10)+'" font-size="10" fill="#2f6fed" text-anchor="middle" font-weight="700">'+days[i].qty+'</text>';
+  }).join('');
+  var labels = days.map(function(d,i){
+    var x = padL + i*stepX;
+    var short = d.date.slice(5); // MM-DD
+    return '<text x="'+x.toFixed(1)+'" y="'+(H-8)+'" font-size="10" fill="#9aa3b0" text-anchor="middle">'+short+'</text>';
+  }).join('');
+  var gridLines = '';
+  for (var g=0; g<=4; g++){
+    var gy = padT + (H-padT-padB)*g/4;
+    gridLines += '<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="#eef1f6" stroke-width="1"></line>';
+  }
+  el.innerHTML = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%;">' +
+    gridLines + '<path d="'+path+'" fill="none" stroke="#2f6fed" stroke-width="2.5"></path>' + dots + labels +
+  '</svg>';
+}
+
+function loadLogisticsFilters(){
+  fetch('/api/logistics/filters').then(checkAuth).then(function(f){
+    function fill(selectId, prefix, values){
+      var sel = document.getElementById(selectId);
+      var opts = ['<option value="All">'+prefix+': All</option>'];
+      values.forEach(function(v){ opts.push('<option value="'+esc(v)+'">'+esc(v)+'</option>'); });
+      sel.innerHTML = opts.join('');
+    }
+    fill('filtConsignee', 'Consignee', f.consignee);
+    fill('filtActualCountry', 'Country', f.actual_country);
+    fill('filtContainerType', 'Container', f.container_type);
+  });
+}
+
+function onLogFilterChange(){
+  state.consignee = document.getElementById('filtConsignee').value;
+  state.actual_country = document.getElementById('filtActualCountry').value;
+  state.container_type = document.getElementById('filtContainerType').value;
+  loadLogistics();
+}
+
+document.getElementById('filtConsignee').addEventListener('change', onLogFilterChange);
+document.getElementById('filtActualCountry').addEventListener('change', onLogFilterChange);
+document.getElementById('filtContainerType').addEventListener('change', onLogFilterChange);
+document.getElementById('filtResetLog').addEventListener('click', function(){
+  document.getElementById('filtConsignee').value = 'All';
+  document.getElementById('filtActualCountry').value = 'All';
+  document.getElementById('filtContainerType').value = 'All';
+  onLogFilterChange();
+});
+
 function loadFilters(){
   fetch('/api/filters').then(checkAuth).then(function(f){
     function fill(selectId, prefix, values){
@@ -629,7 +864,8 @@ function onFilterChange(){
 
 function reloadCurrentPage(){
   if (state.page === 'excessive') loadExcessive();
-  else loadInventory();
+  else if (state.page === 'inventory') loadInventory();
+  else loadLogistics();
 }
 
 document.getElementById('filtRegion').addEventListener('change', onFilterChange);
@@ -642,6 +878,13 @@ document.getElementById('filtReset').addEventListener('click', function(){
   onFilterChange();
 });
 
+var pageTitles = {
+  excessive: 'Inventory Excess Analysis',
+  inventory: 'Inventory Overview',
+  logistics: 'Logistics — Container Tracking'
+};
+var logisticsFiltersLoaded = false;
+
 var navItems = document.querySelectorAll('.nav-item');
 for (var i=0; i<navItems.length; i++){
   navItems[i].addEventListener('click', function(e){
@@ -652,7 +895,13 @@ for (var i=0; i<navItems.length; i++){
     document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('page-' + page).classList.add('active');
     state.page = page;
-    document.getElementById('pageTitle').textContent = page === 'excessive' ? 'Inventory Excess Analysis' : 'Inventory Overview';
+    document.getElementById('pageTitle').textContent = pageTitles[page];
+    document.getElementById('filtersExcessInv').style.display = (page === 'logistics') ? 'none' : 'block';
+    document.getElementById('filtersLogistics').style.display = (page === 'logistics') ? 'block' : 'none';
+    if (page === 'logistics' && !logisticsFiltersLoaded){
+      logisticsFiltersLoaded = true;
+      loadLogisticsFilters();
+    }
     reloadCurrentPage();
   });
 }

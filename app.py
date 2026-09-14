@@ -221,7 +221,7 @@ def summary():
         SELECT part_number AS part, part_name AS name, supplier,
                from_country AS country, mfu,
                excess_stk_qty AS qty, excess_stk_usd AS usd,
-               excess_wks, last_order_date, last_shipment, avg_daily_req
+               excess_wks, transit_reqm, last_order_date, last_shipment, avg_daily_req
         FROM inventory.excess_analysis WHERE with_req = 'EXCESS' {where}
         ORDER BY excess_stk_usd DESC LIMIT 10
     """, params)
@@ -315,6 +315,95 @@ def trend():
     cur.close()
     conn.close()
     return jsonify({"weeks": rows})
+
+
+def build_logistics_filter(args):
+    clauses = []
+    params = []
+    for field, col in (("consignee", "consignee"), ("actual_country", "actual_country"), ("container_type", "container_type")):
+        val = args.get(field)
+        if val and val != "All":
+            clauses.append(f"{col} = %s")
+            params.append(val)
+    where = (" AND " + " AND ".join(clauses)) if clauses else ""
+    return where, params
+
+
+@app.route("/api/logistics/filters")
+@login_required
+def logistics_filters():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT consignee FROM inventory.containers WHERE consignee IS NOT NULL ORDER BY 1")
+    consignee = [r[0] for r in cur.fetchall()]
+    cur.execute("SELECT DISTINCT actual_country FROM inventory.containers WHERE actual_country IS NOT NULL ORDER BY 1")
+    actual_country = [r[0] for r in cur.fetchall()]
+    cur.execute("SELECT DISTINCT container_type FROM inventory.containers WHERE container_type IS NOT NULL ORDER BY 1")
+    container_type = [r[0] for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return jsonify({"consignee": consignee, "actual_country": actual_country, "container_type": container_type})
+
+
+@app.route("/api/logistics/summary")
+@login_required
+def logistics_summary():
+    where, params = build_logistics_filter(request.args)
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute(f"""
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE CURRENT_DATE - actual_date <= 10) AS idle_0_10,
+               COUNT(*) FILTER (WHERE CURRENT_DATE - actual_date > 10) AS idle_gt10
+        FROM inventory.containers WHERE 1=1 {where}
+    """, params)
+    kpi = cur.fetchone()
+
+    cur.execute(f"""
+        SELECT actual_location AS name, COUNT(*) AS value
+        FROM inventory.containers WHERE 1=1 {where}
+        GROUP BY actual_location ORDER BY value DESC LIMIT 12
+    """, params)
+    by_location = cur.fetchall()
+
+    cur.execute(f"""
+        SELECT actual_country AS name, COUNT(*) AS value
+        FROM inventory.containers WHERE 1=1 {where}
+        GROUP BY actual_country ORDER BY value DESC LIMIT 15
+    """, params)
+    by_country = cur.fetchall()
+
+    cur.execute(f"""
+        SELECT supplier_name AS name, COUNT(*) AS value
+        FROM inventory.containers WHERE supplier_name IS NOT NULL {where}
+        GROUP BY supplier_name ORDER BY value DESC LIMIT 12
+    """, params)
+    by_supplier = cur.fetchall()
+
+    cur.execute(f"""
+        SELECT actual_date, COUNT(*) AS qty
+        FROM inventory.containers WHERE actual_date IS NOT NULL {where}
+        GROUP BY actual_date ORDER BY actual_date ASC
+    """, params)
+    daily_qty = cur.fetchall()
+
+    cur.execute(f"""
+        SELECT container_number, route, actual_location,
+               (CURRENT_DATE - actual_date) AS idle_days,
+               actual_date, supplier_name
+        FROM inventory.containers WHERE 1=1 {where}
+        ORDER BY idle_days DESC LIMIT 100
+    """, params)
+    table_rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "kpi": kpi, "byLocation": by_location, "byCountry": by_country,
+        "bySupplier": by_supplier, "dailyQty": daily_qty, "table": table_rows,
+    })
 
 
 if __name__ == "__main__":

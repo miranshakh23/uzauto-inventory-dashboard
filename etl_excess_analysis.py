@@ -48,7 +48,8 @@ def main():
             'PR_MODEL', 'USD PRICE', 'TOT STK', '$ TOT STK', 'EXCESS STK',
             '$ EXCESS STK2', 'Status', 'With Req?', 'TOT STK DOH',
             'EXCESS WKS', 'Last order date', 'Last Shipment', 'AVG DAILY REQ',
-            '$ PLT STK', '$ PLT STK BNCH', '$ INTR STK', '$ TOT STK BNCH']
+            '$ PLT STK', '$ PLT STK BNCH', '$ INTR STK', '$ TOT STK BNCH',
+            'Transit Reqm']
     sub = df[cols].copy()
     sub['Last order date'] = sub['Last order date'].apply(to_date)
     sub['Last Shipment'] = sub['Last Shipment'].apply(to_date)
@@ -67,7 +68,8 @@ def main():
              pr_model, usd_price, tot_stk_qty, tot_stk_usd, excess_stk_qty,
              excess_stk_usd, status, with_req, covered_days,
              excess_wks, last_order_date, last_shipment, avg_daily_req,
-             plt_stk_usd, plt_stk_bnch_usd, intr_stk_usd, tot_stk_bnch_usd)
+             plt_stk_usd, plt_stk_bnch_usd, intr_stk_usd, tot_stk_bnch_usd,
+             transit_reqm)
             VALUES %s
             ON CONFLICT (part_number) DO UPDATE SET
                 part_name = EXCLUDED.part_name,
@@ -92,6 +94,7 @@ def main():
                 plt_stk_bnch_usd = EXCLUDED.plt_stk_bnch_usd,
                 intr_stk_usd = EXCLUDED.intr_stk_usd,
                 tot_stk_bnch_usd = EXCLUDED.tot_stk_bnch_usd,
+                transit_reqm = EXCLUDED.transit_reqm,
                 report_date = CURRENT_DATE,
                 loaded_at = NOW()
         """, records)
