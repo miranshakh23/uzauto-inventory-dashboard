@@ -127,6 +127,9 @@
   tr.total-row td{font-weight:700; background:#f8f9fb; border-top:2px solid var(--border);}
   tr:hover td{background:#f8fafc;}
   .table-scroll{overflow-x:auto;}
+  .table-scroll-y{overflow-x:auto; overflow-y:auto; max-height:480px; border:1px solid var(--border); border-radius:8px;}
+  .table-scroll-y table{margin:0;}
+  .table-scroll-y thead th{position:sticky; top:0; background:#fff; z-index:1;}
 
   .vbar-wrap{display:flex; align-items:flex-end; gap:14px; height:200px; padding-top:10px;}
   .vbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
@@ -177,9 +180,12 @@
     </div>
     <div class="side-block" id="filtersLogistics" style="display:none;">
       <div class="side-title">Filters</div>
-      <select class="filt" id="filtConsignee"><option>Consignee: All</option></select>
-      <select class="filt" id="filtActualCountry"><option>Country: All</option></select>
-      <select class="filt" id="filtContainerType"><option>Container: All</option></select>
+      <label style="font-size:10.5px; color:var(--text-dim2); font-weight:600; margin-bottom:4px; display:block;">CONSIGNEE (bir nechtasini tanlash mumkin)</label>
+      <select class="filt" id="filtConsignee" multiple size="4"></select>
+      <label style="font-size:10.5px; color:var(--text-dim2); font-weight:600; margin:6px 0 4px; display:block;">COUNTRY</label>
+      <select class="filt" id="filtActualCountry" multiple size="4"></select>
+      <label style="font-size:10.5px; color:var(--text-dim2); font-weight:600; margin:6px 0 4px; display:block;">CONTAINER TYPE</label>
+      <select class="filt" id="filtContainerType" multiple size="4"></select>
       <button class="filt-reset" id="filtResetLog">Filtrlarni tozalash</button>
     </div>
     <div class="side-block">
@@ -402,7 +408,7 @@
 
       <div class="card">
         <div class="panel-title">Containers <small id="logTableSub"></small></div>
-        <div class="table-scroll">
+        <div class="table-scroll-y">
         <table>
           <thead>
             <tr>
@@ -427,7 +433,7 @@
 <script>
 var PALETTE = ['#2f6fed', '#1fb6a6', '#f2994a', '#eb5757', '#8b7ff0', '#0f2a4a', '#94a3b8', '#f2c94c'];
 var state = { region: 'All', mfu: 'All', supplier: 'All', page: 'excessive',
-  consignee: 'All', actual_country: 'All', container_type: 'All' };
+  consignee: [], actual_country: [], container_type: [] };
 
 function fmtCompact(v){
   if (v === null || v === undefined) return '$0';
@@ -437,6 +443,7 @@ function fmtCompact(v){
   return "$" + Math.round(v);
 }
 function fmtInt(v){ return Math.round(v || 0).toLocaleString('en-US'); }
+function fmtCount(v){ return Math.round(v || 0).toLocaleString('en-US'); }
 function num(v){ return v === null || v === undefined ? 0 : parseFloat(v); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c] || c; }); }
 function pct(part, total){ return total ? (part/total*100) : 0; }
@@ -458,7 +465,8 @@ function qs(){
   return p.length ? ('?' + p.join('&')) : '';
 }
 
-function renderHBarList(containerId, data, color){
+function renderHBarList(containerId, data, color, fmt){
+  fmt = fmt || fmtCompact;
   var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
   var el = document.getElementById(containerId);
   if (!data.length){ el.innerHTML = '<div class="empty-note">Ma\'lumot yo\'q</div>'; return; }
@@ -467,12 +475,13 @@ function renderHBarList(containerId, data, color){
     return '<div class="hbar-row">' +
       '<div class="lbl" title="'+esc(d.name)+'">'+esc(d.name || '—')+'</div>' +
       '<div class="track"><div class="fill" style="width:'+w+'%;background:'+color+'"></div></div>' +
-      '<div class="amt">'+fmtCompact(d.value)+'</div>' +
+      '<div class="amt">'+fmt(d.value)+'</div>' +
     '</div>';
   }).join('');
 }
 
-function donutSVG(svgEl, data, holeLabel){
+function donutSVG(svgEl, data, holeLabel, fmt){
+  fmt = fmt || fmtCompact;
   var total = data.reduce(function(s,d){ return s+d.value; }, 0);
   var size = svgEl.viewBox.baseVal.width || 120;
   var cx = size/2, cy = size/2, r = size*0.36, sw = size*0.22;
@@ -489,25 +498,27 @@ function donutSVG(svgEl, data, holeLabel){
     return el;
   }).join('');
   var centerText = holeLabel ?
-    '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="'+(size*0.11)+'" font-weight="700" fill="#1c2733">'+fmtCompact(total)+'</text>' +
+    '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="'+(size*0.11)+'" font-weight="700" fill="#1c2733">'+fmt(total)+'</text>' +
     '<text x="'+cx+'" y="'+(cy+size*0.13)+'" text-anchor="middle" font-size="'+(size*0.075)+'" fill="#9aa3b0">'+holeLabel+'</text>' : '';
   svgEl.innerHTML = parts + centerText;
   return data.map(function(d,i){ return {name:d.name, value:d.value, color:d.color||PALETTE[i%PALETTE.length], pct: pct(d.value,total)}; });
 }
 
-function renderLegend(containerId, legendData, rowClass){
+function renderLegend(containerId, legendData, rowClass, fmt){
+  fmt = fmt || fmtCompact;
   document.getElementById(containerId).innerHTML = legendData.map(function(d){
     return '<div class="'+rowClass+'">' +
       '<span class="cat-dot" style="background:'+d.color+'"></span>' +
       '<span class="name" title="'+esc(d.name)+'">'+esc(d.name||'—')+'</span>' +
       '<span class="pct">'+d.pct.toFixed(1)+'%</span>' +
-      '<span class="val">'+fmtCompact(d.value)+'</span>' +
+      '<span class="val">'+fmt(d.value)+'</span>' +
     '</div>';
   }).join('');
 }
 
 function renderVBars(containerId, data, color, opts){
   opts = opts || {};
+  var fmt = opts.fmt || fmtCompact;
   var el = document.getElementById(containerId);
   if (!data.length){ el.innerHTML = '<div class="empty-note">Ma\'lumot yo\'q</div>'; return; }
   var max = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1]));
@@ -515,7 +526,7 @@ function renderVBars(containerId, data, color, opts){
     var h = Math.max(4, (d.value/max*150));
     var c = opts.multiColor ? PALETTE[i%PALETTE.length] : color;
     return '<div class="vbar-col">' +
-      '<div class="vbar-amt">'+fmtCompact(d.value)+'</div>' +
+      '<div class="vbar-amt">'+fmt(d.value)+'</div>' +
       '<div class="vbar-shape" style="height:'+h+'px;background:'+c+'"></div>' +
       '<div class="vbar-name">'+esc(d.name)+'</div>' +
       (d.sub ? '<div class="vbar-sub">'+esc(d.sub)+'</div>' : '') +
@@ -720,9 +731,9 @@ function renderInventory(d){
 /* ---------------- LOGISTICS PAGE ---------------- */
 function qsLog(){
   var p = [];
-  if (state.consignee !== 'All') p.push('consignee=' + encodeURIComponent(state.consignee));
-  if (state.actual_country !== 'All') p.push('actual_country=' + encodeURIComponent(state.actual_country));
-  if (state.container_type !== 'All') p.push('container_type=' + encodeURIComponent(state.container_type));
+  state.consignee.forEach(function(v){ p.push('consignee=' + encodeURIComponent(v)); });
+  state.actual_country.forEach(function(v){ p.push('actual_country=' + encodeURIComponent(v)); });
+  state.container_type.forEach(function(v){ p.push('container_type=' + encodeURIComponent(v)); });
   return p.length ? ('?' + p.join('&')) : '';
 }
 
@@ -742,15 +753,15 @@ function renderLogistics(d){
   document.getElementById('logIdleGt10').textContent = idleGt10.toLocaleString('en-US');
   document.getElementById('logIdleGt10Pct').textContent = pct(idleGt10,total).toFixed(0) + "% jami konteynerdan";
 
-  renderHBarList('logBarLocation', d.byLocation.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--blue)');
-  renderVBars('logVbarCountry', d.byCountry.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true});
-  renderHBarList('logBarSupplier', d.bySupplier.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--purple)');
+  renderHBarList('logBarLocation', d.byLocation.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--blue)', fmtCount);
+  renderVBars('logVbarCountry', d.byCountry.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--teal)', {multiColor:true, fmt:fmtCount});
+  renderHBarList('logBarSupplier', d.bySupplier.map(function(r){ return {name:r.name||'—', value:num(r.value)}; }), 'var(--purple)', fmtCount);
 
   var idleData = [
     {name:'0-10 kun', value:idle10, color:'#1fb6a6'},
     {name:'>10 kun', value:idleGt10, color:'#eb5757'}
   ];
-  renderLegend('logIdleLegend', donutSVG(document.getElementById('logDonutIdle'), idleData, 'Jami'), 'dl-row');
+  renderLegend('logIdleLegend', donutSVG(document.getElementById('logDonutIdle'), idleData, 'Jami', fmtCount), 'dl-row', fmtCount);
 
   // Daily qty trend - last 10 days, oxirgi kunlar 0 bilan to'ldiriladi
   var byDate = {};
@@ -812,22 +823,25 @@ function renderLogTrend(days){
 
 function loadLogisticsFilters(){
   fetch('/api/logistics/filters').then(checkAuth).then(function(f){
-    function fill(selectId, prefix, values){
+    function fill(selectId, values){
       var sel = document.getElementById(selectId);
-      var opts = ['<option value="All">'+prefix+': All</option>'];
-      values.forEach(function(v){ opts.push('<option value="'+esc(v)+'">'+esc(v)+'</option>'); });
-      sel.innerHTML = opts.join('');
+      sel.innerHTML = values.map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('');
     }
-    fill('filtConsignee', 'Consignee', f.consignee);
-    fill('filtActualCountry', 'Country', f.actual_country);
-    fill('filtContainerType', 'Container', f.container_type);
+    fill('filtConsignee', f.consignee);
+    fill('filtActualCountry', f.actual_country);
+    fill('filtContainerType', f.container_type);
   });
 }
 
+function getSelectedValues(selectId){
+  var sel = document.getElementById(selectId);
+  return Array.prototype.filter.call(sel.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+}
+
 function onLogFilterChange(){
-  state.consignee = document.getElementById('filtConsignee').value;
-  state.actual_country = document.getElementById('filtActualCountry').value;
-  state.container_type = document.getElementById('filtContainerType').value;
+  state.consignee = getSelectedValues('filtConsignee');
+  state.actual_country = getSelectedValues('filtActualCountry');
+  state.container_type = getSelectedValues('filtContainerType');
   loadLogistics();
 }
 
@@ -835,9 +849,9 @@ document.getElementById('filtConsignee').addEventListener('change', onLogFilterC
 document.getElementById('filtActualCountry').addEventListener('change', onLogFilterChange);
 document.getElementById('filtContainerType').addEventListener('change', onLogFilterChange);
 document.getElementById('filtResetLog').addEventListener('click', function(){
-  document.getElementById('filtConsignee').value = 'All';
-  document.getElementById('filtActualCountry').value = 'All';
-  document.getElementById('filtContainerType').value = 'All';
+  document.getElementById('filtConsignee').selectedIndex = -1;
+  document.getElementById('filtActualCountry').selectedIndex = -1;
+  document.getElementById('filtContainerType').selectedIndex = -1;
   onLogFilterChange();
 });
 

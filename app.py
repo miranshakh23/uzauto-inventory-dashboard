@@ -221,7 +221,10 @@ def summary():
         SELECT part_number AS part, part_name AS name, supplier,
                from_country AS country, mfu,
                excess_stk_qty AS qty, excess_stk_usd AS usd,
-               excess_wks, transit_reqm, last_order_date, last_shipment, avg_daily_req
+               excess_wks, transit_reqm,
+               TO_CHAR(last_order_date, 'YYYY-MM-DD') AS last_order_date,
+               TO_CHAR(last_shipment, 'YYYY-MM-DD') AS last_shipment,
+               avg_daily_req
         FROM inventory.excess_analysis WHERE with_req = 'EXCESS' {where}
         ORDER BY excess_stk_usd DESC LIMIT 10
     """, params)
@@ -307,7 +310,8 @@ def trend():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        SELECT week_start, total_inventory_usd, excess_usd, excess_items, total_items
+        SELECT TO_CHAR(week_start, 'YYYY-MM-DD') AS week_start,
+               total_inventory_usd, excess_usd, excess_items, total_items
         FROM inventory.weekly_trend
         ORDER BY week_start ASC
     """)
@@ -318,13 +322,15 @@ def trend():
 
 
 def build_logistics_filter(args):
+    """Har bir filtr uchun bir nechta qiymat qabul qilinadi:
+    ?consignee=A&consignee=B kabi takrorlangan query paramlar orqali."""
     clauses = []
     params = []
     for field, col in (("consignee", "consignee"), ("actual_country", "actual_country"), ("container_type", "container_type")):
-        val = args.get(field)
-        if val and val != "All":
-            clauses.append(f"{col} = %s")
-            params.append(val)
+        vals = [v for v in args.getlist(field) if v and v != "All"]
+        if vals:
+            clauses.append(f"{col} = ANY(%s)")
+            params.append(vals)
     where = (" AND " + " AND ".join(clauses)) if clauses else ""
     return where, params
 
@@ -382,7 +388,7 @@ def logistics_summary():
     by_supplier = cur.fetchall()
 
     cur.execute(f"""
-        SELECT actual_date, COUNT(*) AS qty
+        SELECT TO_CHAR(actual_date, 'YYYY-MM-DD') AS actual_date, COUNT(*) AS qty
         FROM inventory.containers WHERE actual_date IS NOT NULL {where}
         GROUP BY actual_date ORDER BY actual_date ASC
     """, params)
@@ -391,7 +397,7 @@ def logistics_summary():
     cur.execute(f"""
         SELECT container_number, route, actual_location,
                (CURRENT_DATE - actual_date) AS idle_days,
-               actual_date, supplier_name
+               TO_CHAR(actual_date, 'YYYY-MM-DD') AS actual_date, supplier_name
         FROM inventory.containers WHERE 1=1 {where}
         ORDER BY idle_days DESC LIMIT 100
     """, params)
